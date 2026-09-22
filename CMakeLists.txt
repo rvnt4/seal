@@ -125,6 +125,8 @@ else()
     target_sources(seal INTERFACE ${SEAL_SOURCES})
 endif()
 
+add_library(seal::seal ALIAS seal)
+
 if(SEAL_HAS_SOURCES)
     set(SEAL_SCOPE PUBLIC)
 else()
