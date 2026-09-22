@@ -93,6 +93,12 @@ class MemTest : public ITest
                 return;
             }
 
+            if ((reinterpret_cast<seal::sealptr>(a1) % 8) != 0)
+            {
+                this->logError("ArenaAllocator alignment failed");
+                return;
+            }
+
             arena.reset();
             if (arena.getAllocatedSize() != 0 || arena.getFreeSize() != ArenaCapacity)
             {
