@@ -2,5 +2,6 @@
 
 namespace seal
 {
-	using ssize = decltype(sizeof(0));
+	using ssize = long long;
+	using usize = decltype(sizeof(0));
 }
