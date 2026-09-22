@@ -54,7 +54,7 @@ namespace seal
         void run(T... args)
         {
             for (usize i = 0; i < _listeners.size(); ++i)
-                _listeners[i].listener(...);
+                _listeners[i].listener(static_cast<T&&>(args)...);
         }
 
         void clear()
