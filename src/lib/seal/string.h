@@ -6,7 +6,7 @@
 namespace seal
 {
     void setStringAllocator(IAllocator* alloc) noexcept;
-
+    IAllocator* getStringAllocator() noexcept;
 
     class String
     {
@@ -15,8 +15,10 @@ namespace seal
             static constexpr usize sso_capacity = 22;
 
             String() noexcept;
+            explicit String(IAllocator* alloc) noexcept;
             String(const char* s) noexcept;
             String(const char* s, usize len) noexcept;
+            String(const char* s, usize len, IAllocator* alloc) noexcept;
             String(const String& other) noexcept;
             String(String&& other) noexcept;
             String& operator=(const String& other) noexcept;
@@ -43,6 +45,7 @@ namespace seal
             usize capacity() const noexcept { return is_heap_ ? repr_.heap.cap : sso_capacity; }
             bool empty() const noexcept { return len_ == 0; }
             bool is_sso() const noexcept { return !is_heap_; }
+            IAllocator* allocator() const noexcept { return alloc_; }
 
             usize find(const char* needle, usize start = 0) const noexcept;
             String substr(usize pos, usize len = npos) const noexcept;
@@ -62,6 +65,7 @@ namespace seal
             Repr repr_;
             usize len_ = 0;
             bool is_heap_ = false;
+            IAllocator* alloc_ = nullptr;
 
             char* data_mut() noexcept { return is_heap_ ? repr_.heap.data : repr_.sso; }
             bool grow_to(usize needed) noexcept;
@@ -118,5 +122,15 @@ namespace seal
     inline constexpr bool operator!=(StringView a, StringView b) noexcept
     {
         return !(a == b);
+    }
+
+    inline constexpr bool operator<(StringView a, StringView b) noexcept
+    {
+        const usize n = a.size() < b.size() ? a.size() : b.size();
+        for (usize i = 0; i < n; ++i)
+        {
+            if (a.data()[i] != b.data()[i]) return a.data()[i] < b.data()[i];
+        }
+        return a.size() < b.size();
     }
 } // namespace seal

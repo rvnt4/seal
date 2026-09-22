@@ -5,36 +5,55 @@ using namespace seal;
 /*
     shared alloc
 */
-IAllocator* g_strAllocator;
+static IAllocator* g_strAllocator = nullptr;
+
 void seal::setStringAllocator(IAllocator* alloc) noexcept
 {
     g_strAllocator = alloc;
 }
 
+IAllocator* seal::getStringAllocator() noexcept
+{
+    return g_strAllocator;
+}
+
 /*
     string impl
 */
-String::String() noexcept
+String::String() noexcept : alloc_(g_strAllocator)
+{
+    repr_.sso[0] = '\0';
+}
+
+String::String(IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocator)
 {
     repr_.sso[0] = '\0';
 }
 
 String::String(const char* s) noexcept : String(s, s ? seal::strlen(s) : 0) {}
 
-String::String(const char* s, usize len) noexcept
+String::String(const char* s, usize len) noexcept : alloc_(g_strAllocator)
 {
     repr_.sso[0] = '\0';
     if (s && len) (void)append(s, len);
 }
 
-String::String(const String& other) noexcept
+String::String(const char* s, usize len, IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocator)
 {
     repr_.sso[0] = '\0';
-    (void)append(other.c_str(), other.len_);
+    if (s && len) (void)append(s, len);
 }
 
-String::String(String&& other) noexcept : len_(other.len_), is_heap_(other.is_heap_)
+String::String(const String& other) noexcept : alloc_(other.alloc_ ? other.alloc_ : g_strAllocator)
 {
+    repr_.sso[0] = '\0';
+    if (other.len_) (void)append(other.c_str(), other.len_);
+}
+
+String::String(String&& other) noexcept : alloc_(other.alloc_)
+{
+    len_ = other.len_;
+    is_heap_ = other.is_heap_;
     if (is_heap_)
         repr_.heap = other.repr_.heap;
     else
@@ -43,6 +62,7 @@ String::String(String&& other) noexcept : len_(other.len_), is_heap_(other.is_he
     other.len_ = 0;
     other.is_heap_ = false;
     other.repr_.sso[0] = '\0';
+    other.alloc_ = g_strAllocator;
 }
 
 String& String::operator=(const String& other) noexcept
@@ -50,7 +70,8 @@ String& String::operator=(const String& other) noexcept
     if (this == &other) return *this;
 
     clear();
-    (void)append(other.c_str(), other.len_);
+    if (!alloc_) alloc_ = other.alloc_ ? other.alloc_ : g_strAllocator;
+    if (other.len_) (void)append(other.c_str(), other.len_);
 
     return *this;
 }
@@ -61,6 +82,7 @@ String& String::operator=(String&& other) noexcept
 
     free_heap();
 
+    alloc_ = other.alloc_;
     len_ = other.len_;
     is_heap_ = other.is_heap_;
 
@@ -72,6 +94,7 @@ String& String::operator=(String&& other) noexcept
     other.len_ = 0;
     other.is_heap_ = false;
     other.repr_.sso[0] = '\0';
+    other.alloc_ = g_strAllocator;
 
     return *this;
 }
@@ -83,21 +106,26 @@ String::~String() noexcept
 
 void String::free_heap() noexcept
 {
-    if (is_heap_ && repr_.heap.data) g_strAllocator->deallocate(repr_.heap.data);
+    if (is_heap_ && repr_.heap.data && alloc_) alloc_->deallocate(repr_.heap.data);
+    repr_.heap.data = nullptr;
+    repr_.heap.cap = 0;
+    is_heap_ = false;
 }
 
 bool String::grow_to(usize needed) noexcept
 {
     if (needed <= capacity()) return true;
-    if (!g_strAllocator) return false;
+    if (!alloc_) return false;
+    if (needed > static_cast<usize>(-1) - 1) return false;
 
     usize new_cap = capacity() ? capacity() * 2 : 32;
+    if (new_cap <= capacity()) new_cap = needed;
     if (new_cap < needed) new_cap = needed;
 
-    char* new_buf = static_cast<char*>(g_strAllocator->allocate(new_cap + 1, 1));
+    char* new_buf = static_cast<char*>(alloc_->allocate(static_cast<ssize>(new_cap + 1), 1));
     if (!new_buf) return false;
 
-    memcpy(new_buf, c_str(), len_ + 1); // includes null terminator
+    memcpy(new_buf, c_str(), len_ + 1);
     free_heap();
 
     repr_.heap.data = new_buf;
@@ -129,7 +157,9 @@ bool String::resize(usize new_len, char fill) noexcept
 bool String::append(const char* s, usize len) noexcept
 {
     if (len == 0) return true;
+    if (!s) return false;
     usize needed = len_ + len;
+    if (needed < len_) return false;
     if (!grow_to(needed)) return false;
     char* buf = data_mut();
     memcpy(buf + len_, s, len);
@@ -192,7 +222,7 @@ String String::substr(usize pos, usize len) const noexcept
     usize avail = len_ - pos;
     usize take = (len == npos || len > avail) ? avail : len;
 
-    return String(c_str() + pos, take);
+    return String(c_str() + pos, take, alloc_);
 }
 
 int String::compare(const String& other) const noexcept
@@ -212,14 +242,17 @@ void String::swap(String& other) noexcept
     Repr tmp_repr = repr_;
     usize tmp_len = len_;
     bool tmp_heap = is_heap_;
+    IAllocator* tmp_alloc = alloc_;
 
     repr_ = other.repr_;
     len_ = other.len_;
     is_heap_ = other.is_heap_;
+    alloc_ = other.alloc_;
 
     other.repr_ = tmp_repr;
     other.len_ = tmp_len;
     other.is_heap_ = tmp_heap;
+    other.alloc_ = tmp_alloc;
 }
 
 namespace seal
