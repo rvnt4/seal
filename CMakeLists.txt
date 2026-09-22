@@ -12,6 +12,7 @@ option(SEAL_STRING "Use string library" OFF)
 option(SEAL_VECTOR "Use vector library" OFF)
 option(SEAL_FMT "Use format library" OFF)
 option(SEAL_LOG "Use log library" OFF)
+option(SEAL_VFS "Use virtual file system" OFF)
 option(SEAL_EVENTS "Use events library" OFF)
 
 option(SEAL_TEST "Build test project" OFF)
@@ -37,6 +38,13 @@ if (SEAL_VECTOR)
     set(SEAL_MEM ON CACHE BOOL "" FORCE)
 endif() 
 
+# vfs depends on str, vec, mem
+if (SEAL_VFS)
+    set(SEAL_STRING ON CACHE BOOL "" FORCE)
+    set(SEAL_VECTOR ON CACHE BOOL "" FORCE)
+    set(SEAL_MEM ON CACHE BOOL "" FORCE)
+endif()
+
 # events depends on vec, mem
 if (SEAL_EVENTS)
     set(SEAL_VECTOR ON CACHE BOOL "" FORCE)
@@ -45,7 +53,7 @@ endif()
 
 # all libs for test
 if (SEAL_TEST) 
-    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT SEAL_LOG)
+    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT SEAL_LOG SEAL_VFS SEAL_EVENTS)
     foreach(lib ${ALL_LIBS})
         set(${lib} ON CACHE BOOL "" FORCE)
     endforeach()
@@ -80,6 +88,11 @@ endif()
 if (SEAL_LOG)
     list(APPEND SEAL_SOURCES "src/lib/seal/log.h")
     list(APPEND SEAL_TEST_SOURCES "src/test/tests/log.cpp")
+endif()
+
+if (SEAL_VFS)
+    list(APPEND SEAL_SOURCES "src/lib/seal/vfs.cpp" "src/lib/seal/vfs.h")
+    list(APPEND SEAL_TEST_SOURCES "src/test/tests/vfs.cpp")
 endif()
 
 if (SEAL_EVENTS)
