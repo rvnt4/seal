@@ -11,8 +11,15 @@ option(SEAL_MEM "Use memory library" OFF)
 option(SEAL_STRING "Use string library" OFF)
 option(SEAL_VECTOR "Use vector library" OFF)
 option(SEAL_FMT "Use format library" OFF)
+option(SEAL_LOG "Use log library" OFF)
 
 option(SEAL_TEST "Build test project" OFF)
+
+# log depends on fmt and vec
+if (SEAL_LOG)
+    set(SEAL_FMT ON CACHE BOOL "" FORCE)
+    set(SEAL_VECTOR ON CACHE BOOL "" FORCE)
+endif()
 
 # fmt depends on str
 if (SEAL_FMT)
@@ -21,17 +28,17 @@ endif()
 
 # str depends on mem
 if (SEAL_STRING)
- set(SEAL_MEM ON CACHE BOOL "" FORCE)
+    set(SEAL_MEM ON CACHE BOOL "" FORCE)
 endif() 
 
 # vec depends on mem
 if (SEAL_VECTOR)
- set(SEAL_MEM ON CACHE BOOL "" FORCE)
+    set(SEAL_MEM ON CACHE BOOL "" FORCE)
 endif() 
 
-
+# all libs for test
 if (SEAL_TEST) 
-    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT)
+    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT SEAL_LOG)
     foreach(lib ${ALL_LIBS})
         set(${lib} ON CACHE BOOL "" FORCE)
     endforeach()
@@ -61,6 +68,11 @@ endif()
 if (SEAL_FMT)
     list(APPEND SEAL_SOURCES "src/lib/seal/fmt.h")
     list(APPEND SEAL_TEST_SOURCES "src/test/tests/fmt.cpp")
+endif()
+
+if (SEAL_LOG)
+    list(APPEND SEAL_SOURCES "src/lib/seal/log.h")
+    list(APPEND SEAL_TEST_SOURCES "src/test/tests/log.cpp")
 endif()
 
 
