@@ -168,6 +168,7 @@ class StringTest : public ITest
                     return;
                 }
 
+                seal::setStringAllocator(nullptr);
             }
             seal::setStringAllocator(&heapAllocator);
 
