@@ -156,6 +156,27 @@ class StringTest : public ITest
                 return;
             }
 
+            /*
+                allocator lifetime safety
+            */
+            this->logInfo("testing String allocator lifetime safety");
+            {
+                seal::String heapStr("This string is definitely longer than the small string optimization buffer.");
+                if (heapStr.is_sso())
+                {
+                    this->logError("expected a heap-backed string");
+                    return;
+                }
+
+            }
+            seal::setStringAllocator(&heapAllocator);
+
+            if (seal::getStringAllocator() != &heapAllocator)
+            {
+                this->logError("setStringAllocator/getStringAllocator mismatch");
+                return;
+            }
+
             this->logInfo("all string tests passed successfully");
         }
 
