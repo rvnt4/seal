@@ -93,6 +93,16 @@ namespace seal
                 }
             }
 
+            void erase(usize idx) noexcept
+            {
+                if (idx >= _len) return;
+                for (usize i = idx; i < _len - 1; ++i)
+                {
+                    _data[i] = static_cast<T&&>(_data[i + 1]);
+                }
+                _data[--_len].~T();
+            }
+
             T* begin() noexcept { return _data; }
             T* end() noexcept { return _data + _len; }
             const T* begin() const noexcept { return _data; }
