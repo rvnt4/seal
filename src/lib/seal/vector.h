@@ -53,7 +53,7 @@ namespace seal
                     if (!reserve(new_cap)) return false;
                 }
 
-                ::new (static_cast<void*>(&_data[_len++])) T(static_cast<T&&>(item));
+                ::new (static_cast<void*>(&_data[_len++]), seal::placement_t{}) T(static_cast<T&&>(item));
                 return true;
             }
 
@@ -67,7 +67,7 @@ namespace seal
 
                 for (usize i = 0; i < _len; ++i)
                 {
-                    ::new (static_cast<void*>(&new_data[i])) T(static_cast<T&&>(_data[i]));
+                    ::new (static_cast<void*>(&new_data[i]), seal::placement_t{}) T(static_cast<T&&>(_data[i]));
                     _data[i].~T();
                 }
 
