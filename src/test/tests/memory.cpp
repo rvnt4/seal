@@ -69,7 +69,7 @@ class MemTest : ITest
             */
             this->logInfo("testing ArenaAllocator");
 
-            constexpr size_t ArenaCapacity = 512;
+            constexpr seal::ssize ArenaCapacity = 512;
             seal::ArenaAllocator<ArenaCapacity> arena;
 
             if (arena.getAllocatedSize() != 0 || arena.getFreeSize() != ArenaCapacity)
