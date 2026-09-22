@@ -1,55 +1,63 @@
 #pragma once
 
+/*
+    break into the debugger when available or terminates through seal::fatalExit().
+*/
 #if defined(_MSC_VER)
-    #define SEALLIB_DEBUGBREAK() __debugbreak()
-    #define SEALLIB_ASSUME(cond) __assume(cond)
+    #define SEAL_DEBUGBREAK() __debugbreak()
 #elif defined(__GNUC__) || defined(__clang__)
-    #define SEALLIB_DEBUGBREAK() __builtin_trap()
-    #define SEALLIB_ASSUME(cond)                                                                                       \
+    #define SEAL_DEBUGBREAK() __builtin_trap()
+#else
+    #define SEAL_DEBUGBREAK() ((void)0)
+#endif
+
+/*
+    tell the optimizer a condition is always true.
+*/
+#if defined(_MSC_VER)
+    #define SEAL_ASSUME(cond) __assume(cond)
+#elif defined(__GNUC__) || defined(__clang__)
+    #define SEAL_ASSUME(cond)                                                                                       \
         do                                                                                                             \
         {                                                                                                              \
             if (!(cond)) __builtin_unreachable();                                                                      \
         } while (0)
 #else
-    #define SEALLIB_DEBUGBREAK()                                                                                       \
-        do                                                                                                             \
-        {                                                                                                              \
-        } while (0)
-    #define SEALLIB_ASSUME(cond)                                                                                       \
-        do                                                                                                             \
-        {                                                                                                              \
-        } while (0)
+    #define SEAL_ASSUME(cond) ((void)0)
 #endif
 
-#ifdef _DEBUG
+namespace seal
+{
+    void displayError(const char* msg, const char* file, int line);
+    [[noreturn]] void fatalExit();
+} // namespace seallib
+
+/*
+    Shared fatal path for ASSERT and PANIC.
+*/
+#define SEAL_FATAL(msg)                                                                                             \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        seal::displayError((msg), __FILE__, __LINE__);                                                              \
+        SEAL_DEBUGBREAK();                                                                                          \
+        seal::fatalExit();                                                                                          \
+    } while (0)
+
+#if !defined(NDEBUG)
     #define ASSERT(cond, msg)                                                                                          \
         do                                                                                                             \
         {                                                                                                              \
             if (!(cond))                                                                                               \
             {                                                                                                          \
-                seallib::displayError(msg, __FILE__, __LINE__);                                                        \
-                SEALLIB_DEBUGBREAK();                                                                                  \
-                for (;;)                                                                                               \
-                {                                                                                                      \
-                } /* infinite loop to prevent execution continuation */                                                \
+                SEAL_FATAL(msg);                                                                                    \
             }                                                                                                          \
-            SEALLIB_ASSUME(cond);                                                                                      \
+            SEAL_ASSUME(cond);                                                                                      \
         } while (0)
 #else
-    #define ASSERT(cond, msg) SEALLIB_ASSUME(cond)
+    #define ASSERT(cond, msg) SEAL_ASSUME(cond)
 #endif
 
-#define PANIC(msg)                                                                                                     \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        seallib::displayError(msg, __FILE__, __LINE__);                                                                \
-        SEALLIB_DEBUGBREAK();                                                                                          \
-        for (;;)                                                                                                       \
-        {                                                                                                              \
-        } /* infinite loop to prevent execution continuation */                                                        \
-    } while (0)
-
-namespace seallib
-{
-    void displayError(const char* msg, const char* file, int line);
-}
+/*
+    PANIC always halts execution, in debug and release builds alike.
+*/
+#define PANIC(msg) SEAL_FATAL(msg)
