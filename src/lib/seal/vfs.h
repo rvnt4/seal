@@ -22,8 +22,9 @@ namespace seal
             {
                 other.data = nullptr;
                 other.size = 0;
+                other.allocator = nullptr;
             }
-            
+
             FileBuffer& operator=(FileBuffer&& other) noexcept
             {
                 if (this != &other)
@@ -34,6 +35,7 @@ namespace seal
                     allocator = other.allocator;
                     other.data = nullptr;
                     other.size = 0;
+                    other.allocator = nullptr;
                 }
                 return *this;
             }
@@ -111,8 +113,8 @@ namespace seal
             {
                     String virtualPath;
                     SharedPtr<IFileProvider> provider;
-                    int priority;
-                    usize pathDepth;
+                    int priority = 0;
+                    usize pathDepth = 0;
 
                     MountPoint() = default;
                     MountPoint(String path, SharedPtr<IFileProvider> prov, int prio)
@@ -132,6 +134,8 @@ namespace seal
 
             static bool isPathSeparator(char c);
             static String trimPathSeparators(StringView path, IAllocator* alloc);
+
+            static bool matchesMount(const MountPoint& mount, StringView searchPath, String& outRelative);
 
             bool getRelativePath(const MountPoint& mount, StringView searchPath, String& outRelative) const;
     };

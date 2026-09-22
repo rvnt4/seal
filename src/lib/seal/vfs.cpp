@@ -10,45 +10,57 @@ namespace seal
     {
         FileBuffer buffer;
         if (!alloc) return buffer;
+
         buffer.allocator = alloc;
         buffer.size = content.size();
-        buffer.data = static_cast<unsigned char*>(alloc->allocate(buffer.size));
-        if (buffer.data && buffer.size > 0)
+
+        const ssize request = static_cast<ssize>(buffer.size ? buffer.size : 1);
+        buffer.data = static_cast<unsigned char*>(alloc->allocate(request, 1));
+        if (!buffer.data)
         {
-            memcpy(buffer.data, content.data(), buffer.size);
+            buffer.size = 0;
+            return buffer;
         }
+
+        if (buffer.size > 0) memcpy(buffer.data, content.data(), static_cast<ssize>(buffer.size));
         return buffer;
     }
 
     String FileBuffer::toString() const
     {
-        if (!isValid() || size == 0) return String();
-        return String(reinterpret_cast<const char*>(data), size);
+        if (!isValid() || size == 0) return String(allocator);
+        return String(reinterpret_cast<const char*>(data), size, allocator);
     }
 
     /*
         vfs
     */
-    VirtualFileSystem::VirtualFileSystem(IAllocator* alloc) : _allocator(alloc), _mounts(alloc) {}
+    VirtualFileSystem::VirtualFileSystem(IAllocator* alloc)
+        : _allocator(alloc ? alloc : getStringAllocator()), _mounts(_allocator)
+    {
+    }
 
     void VirtualFileSystem::mount(StringView virtualPath, SharedPtr<IFileProvider> provider, int priority)
     {
         if (!provider) return;
         String path = trimPathSeparators(normalizePath(virtualPath), _allocator);
 
-        _mounts.push_back(MountPoint(static_cast<String&&>(path), provider, priority));
+        if (!_mounts.push_back(MountPoint(static_cast<String&&>(path), provider, priority))) return;
 
-        for (usize i = 1; i < _mounts.size(); ++i)
+        usize i = _mounts.size() - 1;
+        while (i > 0)
         {
-            MountPoint key = static_cast<MountPoint&&>(_mounts[i]);
-            usize j = i;
-            while (j > 0 && (_mounts[j - 1].priority < key.priority || 
-                            (_mounts[j - 1].priority == key.priority && _mounts[j - 1].pathDepth < key.pathDepth)))
-            {
-                _mounts[j] = static_cast<MountPoint&&>(_mounts[j - 1]);
-                j--;
-            }
-            _mounts[j] = static_cast<MountPoint&&>(key);
+            MountPoint& prev = _mounts[i - 1];
+            MountPoint& curr = _mounts[i];
+            const bool prev_comes_after =
+                (prev.priority < curr.priority) ||
+                (prev.priority == curr.priority && prev.pathDepth < curr.pathDepth);
+            if (!prev_comes_after) break;
+
+            MountPoint tmp = static_cast<MountPoint&&>(_mounts[i - 1]);
+            _mounts[i - 1] = static_cast<MountPoint&&>(_mounts[i]);
+            _mounts[i] = static_cast<MountPoint&&>(tmp);
+            --i;
         }
     }
 
@@ -190,9 +202,9 @@ namespace seal
 
     String VirtualFileSystem::normalizePath(StringView path) const
     {
-        if (path.empty()) return String("/");
+        if (path.empty()) return String("/", 1, _allocator);
 
-        String result;
+        String result(_allocator);
         for (usize i = 0; i < path.size(); ++i)
         {
             char c = path.data()[i];
@@ -222,7 +234,7 @@ namespace seal
             pos = next + 1;
         }
 
-        if (parts.empty()) return String("/");
+        if (parts.empty()) return String("/", 1, _allocator);
 
         result.clear();
         for (usize i = 0; i < parts.size(); ++i)
@@ -241,26 +253,7 @@ namespace seal
 
         for (usize i = 0; i < _mounts.size(); ++i)
         {
-            if (searchPath == _mounts[i].virtualPath)
-            {
-                relativePath = String("/");
-                return &_mounts[i];
-            }
-
-            if (_mounts[i].virtualPath == String("/"))
-            {
-                relativePath = searchPath;
-                return &_mounts[i];
-            }
-
-            String prefix = _mounts[i].virtualPath;
-            (void)prefix.push_back('/');
-            
-            if (searchPath.size() > prefix.size() && StringView(searchPath).substr(0, prefix.size()) == StringView(prefix))
-            {
-                relativePath = searchPath.substr(prefix.size());
-                return &_mounts[i];
-            }
+            if (matchesMount(_mounts[i], searchPath, relativePath)) return &_mounts[i];
         }
         return nullptr;
     }
@@ -283,20 +276,19 @@ namespace seal
         {
             start++;
         }
-        
-        if (start == path.size()) return String("/");
+
+        if (start == path.size()) return String("/", 1, alloc);
 
         usize end = path.size() - 1;
         while (end > start && isPathSeparator(path.data()[end]))
         {
             end--;
         }
-        
-        return String(path.data() + start, end - start + 1);
+
+        return String(path.data() + start, end - start + 1, alloc);
     }
 
-    bool VirtualFileSystem::getRelativePath(const MountPoint& mount, StringView searchPath,
-                                            String& outRelative) const
+    bool VirtualFileSystem::matchesMount(const MountPoint& mount, StringView searchPath, String& outRelative)
     {
         if (searchPath == StringView(mount.virtualPath))
         {
@@ -308,14 +300,20 @@ namespace seal
             outRelative = String(searchPath.data(), searchPath.size());
             return true;
         }
-        String prefix = mount.virtualPath;
-        (void)prefix.push_back('/');
-        if (searchPath.size() >= prefix.size() && searchPath.substr(0, prefix.size()) == StringView(prefix))
-        {
-            outRelative = String(searchPath.data() + prefix.size(), searchPath.size() - prefix.size());
-            return true;
-        }
-        return false;
+
+        const StringView mountPath(mount.virtualPath);
+        if (searchPath.size() <= mountPath.size()) return false;
+        if (!StringView(searchPath).starts_with(mountPath)) return false;
+        if (searchPath.data()[mountPath.size()] != '/') return false; // require a path boundary
+
+        outRelative = String(searchPath.data() + mountPath.size() + 1, searchPath.size() - mountPath.size() - 1);
+        return true;
+    }
+
+    bool VirtualFileSystem::getRelativePath(const MountPoint& mount, StringView searchPath,
+                                            String& outRelative) const
+    {
+        return matchesMount(mount, searchPath, outRelative);
     }
 
     /*
