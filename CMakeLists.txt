@@ -12,6 +12,7 @@ option(SEAL_STRING "Use string library" OFF)
 option(SEAL_VECTOR "Use vector library" OFF)
 option(SEAL_FMT "Use format library" OFF)
 option(SEAL_LOG "Use log library" OFF)
+option(SEAL_EVENTS "Use events library" OFF)
 
 option(SEAL_TEST "Build test project" OFF)
 
@@ -35,6 +36,12 @@ endif()
 if (SEAL_VECTOR)
     set(SEAL_MEM ON CACHE BOOL "" FORCE)
 endif() 
+
+# events depends on vec, mem
+if (SEAL_EVENTS)
+    set(SEAL_VECTOR ON CACHE BOOL "" FORCE)
+    set(SEAL_MEM ON CACHE BOOL "" FORCE)
+endif()
 
 # all libs for test
 if (SEAL_TEST) 
@@ -73,6 +80,11 @@ endif()
 if (SEAL_LOG)
     list(APPEND SEAL_SOURCES "src/lib/seal/log.h")
     list(APPEND SEAL_TEST_SOURCES "src/test/tests/log.cpp")
+endif()
+
+if (SEAL_EVENTS)
+    list(APPEND SEAL_SOURCES "src/lib/seal/events.h")
+    list(APPEND SEAL_TEST_SOURCES "src/test/tests/events.cpp")
 endif()
 
 
