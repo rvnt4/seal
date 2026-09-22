@@ -37,6 +37,7 @@ class ITest
 
         template <typename... Args> void logError(std::format_string<Args...> fmt, Args&&... args)
         {
+            _failed = true;
             writeLog("\x1b[97;41m", std::vformat(fmt.get(), std::make_format_args(args...)));
         }
 
@@ -47,6 +48,8 @@ class ITest
         {
             std::cout << color << "[" << getName() << "]" << "\x1b[0m " << message << std::endl;
         }
+
+        bool _failed = false;
 };
 
 /*
@@ -61,6 +64,11 @@ class TestRunner
             {
                 test->logInfo("------- Init -------");
                 test->run();
+                if (test->_failed)
+                {
+                    test->logError("test reported one or more failures");
+                    _failures++;
+                }
                 test->logInfo("-------- End --------");
             }
         }
@@ -70,6 +78,8 @@ class TestRunner
             static TestRunner instance;
             return instance;
         }
+
+        int failureCount() const { return _failures; }
 
     protected:
         void registerTest(ITest* test) { _tests.push_back(test); }
@@ -81,6 +91,7 @@ class TestRunner
         TestRunner& operator=(const TestRunner&) = delete;
 
         std::vector<ITest*> _tests;
+        int _failures = 0;
 };
 
 /*
