@@ -112,6 +112,28 @@ namespace seal
         formatArg(out, static_cast<unsigned long long>(val));
     }
 
+    inline void formatArg(String& out, double val)
+    {
+        if (val < 0.0)
+        {
+            (void)out.push_back('-');
+            val = -val;
+        }
+        
+        long long int_part = static_cast<long long>(val);
+        formatArg(out, static_cast<unsigned long long>(int_part));
+        (void)out.push_back('.');
+        
+        double frac = val - static_cast<double>(int_part);
+        for (int i = 0; i < 6; ++i)
+        {
+            frac *= 10.0;
+            int digit = static_cast<int>(frac);
+            (void)out.push_back(static_cast<char>('0' + digit));
+            frac -= digit;
+        }
+    }
+
     inline void formatImpl(String& out, StringView fmt)
     {
         (void)out.append(fmt.data(), fmt.size());
