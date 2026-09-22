@@ -4,6 +4,13 @@
 
 namespace seal
 {
+    struct placement_t {};
+}
+inline void* operator new(seal::usize size, void* ptr, seal::placement_t) noexcept { return ptr; }
+inline void operator delete(void*, void*, seal::placement_t) noexcept {}
+
+namespace seal
+{
     /*
         ptr type
     */
