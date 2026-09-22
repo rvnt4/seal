@@ -127,11 +127,26 @@ class MemTest : public ITest
                 return;
             }
 
+            // data must survive a reallocation
+            char* p1 = static_cast<char*>(h1);
+            for (int i = 0; i < 64; ++i)
+                p1[i] = static_cast<char>(i);
+
             void* h3 = heap.reallocate(h1, 256, 8);
             if (!h3)
             {
                 this->logError("DynamicHeapAllocator reallocate failed");
                 return;
+            }
+
+            char* p3 = static_cast<char*>(h3);
+            for (int i = 0; i < 64; ++i)
+            {
+                if (p3[i] != static_cast<char>(i))
+                {
+                    this->logError("DynamicHeapAllocator reallocate corrupted data");
+                    return;
+                }
             }
 
             heap.deallocate(h2);
