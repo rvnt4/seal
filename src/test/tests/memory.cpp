@@ -2,7 +2,7 @@
 
 #include <seal/memory.h>
 
-class MemTest : ITest
+class MemTest : public ITest
 {
     public:
         MemTest() : ITest() {};
@@ -37,6 +37,14 @@ class MemTest : ITest
             if (seal::memcmp(src, dest, 5) != 0)
             {
                 this->logError("memcpy/memcmp failed: mismatch?");
+                return;
+            }
+
+            char overlap[10] = "abcdefghi";
+            seal::memmove(overlap + 1, overlap, 8);
+            if (seal::memcmp(overlap + 1, "abcdefgh", 8) != 0)
+            {
+                this->logError("memmove failed on overlapping range");
                 return;
             }
 
