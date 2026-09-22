@@ -60,7 +60,7 @@ class MemTest : public ITest
             */
             this->logInfo("testing memory alignment functions");
 
-            if (!seal::isPowerOfTwo(8) || seal::isPowerOfTwo(5))
+            if (!seal::isPowerOfTwo(8) || seal::isPowerOfTwo(5) || seal::isPowerOfTwo(0) || seal::isPowerOfTwo(-2))
             {
                 this->logError("isPowerOfTwo failed");
                 return;
