@@ -278,4 +278,87 @@ namespace seal
             void insertFreeBlock(BlockHeader* block);
             void removeFreeBlock(BlockHeader* block);
     };
+
+    /*
+        shared ptr
+    */
+    template <typename T> class SharedPtr
+    {
+        private:
+            struct ControlBlock
+            {
+                    T* ptr;
+                    usize ref_count;
+                    IAllocator* alloc;
+            };
+
+            ControlBlock* _cb = nullptr;
+
+        public:
+            constexpr SharedPtr() noexcept = default;
+
+            explicit SharedPtr(T* ptr, IAllocator* alloc) noexcept
+            {
+                if (!ptr || !alloc) return;
+                _cb = static_cast<ControlBlock*>(alloc->allocate(sizeof(ControlBlock), alignof(ControlBlock)));
+                if (_cb)
+                {
+                    _cb->ptr = ptr;
+                    _cb->ref_count = 1;
+                    _cb->alloc = alloc;
+                }
+            }
+
+            ~SharedPtr() noexcept { release(); }
+
+            SharedPtr(const SharedPtr& other) noexcept : _cb(other._cb)
+            {
+                if (_cb) _cb->ref_count++;
+            }
+
+            SharedPtr& operator=(const SharedPtr& other) noexcept
+            {
+                if (this != &other)
+                {
+                    release();
+                    _cb = other._cb;
+                    if (_cb) _cb->ref_count++;
+                }
+                return *this;
+            }
+
+            SharedPtr(SharedPtr&& other) noexcept : _cb(other._cb) { other._cb = nullptr; }
+
+            SharedPtr& operator=(SharedPtr&& other) noexcept
+            {
+                if (this != &other)
+                {
+                    release();
+                    _cb = other._cb;
+                    other._cb = nullptr;
+                }
+                return *this;
+            }
+
+            T* get() const noexcept { return _cb ? _cb->ptr : nullptr; }
+            T* operator->() const noexcept { return get(); }
+            T& operator*() const noexcept { return *get(); }
+            explicit operator bool() const noexcept { return get() != nullptr; }
+
+        private:
+            void release() noexcept
+            {
+                if (_cb)
+                {
+                    if (--_cb->ref_count == 0)
+                    {
+                        IAllocator* alloc = _cb->alloc;
+                        _cb->ptr->~T();
+                        alloc->deallocate(_cb->ptr);
+                        alloc->deallocate(_cb);
+                    }
+                    _cb = nullptr;
+                }
+            }
+    };
 } // namespace seal
