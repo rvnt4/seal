@@ -140,6 +140,16 @@ class VFSTest : public ITest
             if (vfs.exists(seal::StringView("scripts/main.lua"))) logError("Failed to delete file, scrips/main.lua still accessible");
 
             /*
+                empty file support
+            */
+            logInfo("Testing empty file buffer");
+            seal::FileBuffer emptyBuf = seal::FileBuffer::fromString(seal::StringView(""), &heapAllocator);
+            if (!emptyBuf.isValid() || emptyBuf.size != 0)
+            {
+                logError("empty FileBuffer should be valid with size 0");
+            }
+
+            /*
                 unmounting
             */
             vfs.unmount(seal::StringView("scripts"));
