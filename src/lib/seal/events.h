@@ -18,49 +18,84 @@ namespace seal
         {
             if (stub) stub(context, static_cast<T&&>(args)...);
         }
-        
+
         bool operator==(const Delegate& other) const { return context == other.context && stub == other.stub; }
         bool operator!=(const Delegate& other) const { return !(*this == other); }
     };
 
-    template <typename... T> 
+    template <typename... T>
     class Event
     {
     public:
         using ConnectionId = usize;
+        static constexpr ConnectionId InvalidConnection = 0;
 
-        explicit Event(IAllocator* alloc) : _listeners(alloc), _nextId(0) {}
+        explicit Event(IAllocator* alloc)
+            : _listeners(alloc), _nextId(0), _dispatching(false), _pendingRemovals(false)
+        {
+        }
 
         ConnectionId addListener(Delegate<T...> listener)
         {
             ConnectionId id = ++_nextId;
-            _listeners.push_back({id, listener});
+            if (id == InvalidConnection) id = ++_nextId;
+
+            ListenerInfo info{id, listener};
+            if (!_listeners.push_back(static_cast<ListenerInfo&&>(info))) return InvalidConnection;
             return id;
         }
 
         bool removeListener(ConnectionId id)
         {
+            if (id == InvalidConnection) return false;
             for (usize i = 0; i < _listeners.size(); ++i)
             {
-                if (_listeners[i].id == id)
+                if (_listeners[i].id == id && _listeners[i].listener.stub)
                 {
-                    _listeners.erase(i);
+                    if (_dispatching)
+                    {
+                        _listeners[i].listener.stub = nullptr;
+                        _pendingRemovals = true;
+                    }
+                    else
+                    {
+                        _listeners.erase(i);
+                    }
                     return true;
                 }
             }
             return false;
         }
 
-        void run(T... args)
+        void run(const T&... args)
         {
-            for (usize i = 0; i < _listeners.size(); ++i)
-                _listeners[i].listener(static_cast<T&&>(args)...);
+            const usize count = _listeners.size();
+            _dispatching = true;
+            for (usize i = 0; i < count; ++i)
+            {
+                if (i < _listeners.size() && _listeners[i].listener.stub)
+                    _listeners[i].listener(args...);
+            }
+            _dispatching = false;
+
+            if (_pendingRemovals) compact();
         }
 
         void clear()
         {
-            _listeners.clear();
+            if (_dispatching)
+            {
+                for (usize i = 0; i < _listeners.size(); ++i)
+                    _listeners[i].listener.stub = nullptr;
+                _pendingRemovals = true;
+            }
+            else
+            {
+                _listeners.clear();
+            }
         }
+
+        usize listenerCount() const { return _listeners.size(); }
 
     private:
         struct ListenerInfo
@@ -69,7 +104,21 @@ namespace seal
             Delegate<T...> listener;
         };
 
+        void compact()
+        {
+            for (usize i = 0; i < _listeners.size();)
+            {
+                if (!_listeners[i].listener.stub)
+                    _listeners.erase(i);
+                else
+                    ++i;
+            }
+            _pendingRemovals = false;
+        }
+
         Vector<ListenerInfo> _listeners;
         ConnectionId _nextId;
+        bool _dispatching;
+        bool _pendingRemovals;
     };
 } // namespace seal
