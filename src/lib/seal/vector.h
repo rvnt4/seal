@@ -45,24 +45,35 @@ namespace seal
                 return *this;
             }
 
-            bool push_back(T item) noexcept
+            bool push_back(const T& item) noexcept
             {
-                if (_len >= _cap)
-                {
-                    usize new_cap = (_cap == 0) ? 4 : _cap * 2;
-                    if (!reserve(new_cap)) return false;
-                }
+                if (!ensure_capacity()) return false;
+                ::new (static_cast<void*>(&_data[_len++]), seal::placement_t{}) T(item);
+                return true;
+            }
 
+            bool push_back(T&& item) noexcept
+            {
+                if (!ensure_capacity()) return false;
                 ::new (static_cast<void*>(&_data[_len++]), seal::placement_t{}) T(static_cast<T&&>(item));
                 return true;
             }
 
-           bool reserve(usize new_cap) noexcept
+            template <typename... Args> bool emplace_back(Args&&... args) noexcept
+            {
+                if (!ensure_capacity()) return false;
+                ::new (static_cast<void*>(&_data[_len++]), seal::placement_t{}) T(static_cast<Args&&>(args)...);
+                return true;
+            }
+
+            bool reserve(usize new_cap) noexcept
             {
                 if (new_cap <= _cap) return true;
                 if (!_alloc) return false;
+                if (new_cap > static_cast<usize>(-1) / sizeof(T)) return false; // multiplication overflow
 
-                T* new_data = static_cast<T*>(_alloc->allocate(sizeof(T) * new_cap, alignof(T)));
+                T* new_data = static_cast<T*>(
+                    _alloc->allocate(static_cast<ssize>(sizeof(T) * new_cap), static_cast<ssize>(alignof(T))));
                 if (!new_data) return false;
 
                 for (usize i = 0; i < _len; ++i)
@@ -113,8 +124,26 @@ namespace seal
             const T* begin() const noexcept { return _data; }
             const T* end() const noexcept { return _data + _len; }
             usize size() const noexcept { return _len; }
+            usize capacity() const noexcept { return _cap; }
+
+            T* data() noexcept { return _data; }
+            const T* data() const noexcept { return _data; }
+
+            T& front() noexcept { return _data[0]; }
+            const T& front() const noexcept { return _data[0]; }
+
+            T& back() noexcept { return _data[_len - 1]; }
+            const T& back() const noexcept { return _data[_len - 1]; }
 
         private:
+            bool ensure_capacity() noexcept
+            {
+                if (_len < _cap) return true;
+                usize new_cap = (_cap == 0) ? 4 : _cap * 2;
+                if (new_cap <= _cap) return false; // overflow
+                return reserve(new_cap);
+            }
+
             T* _data = nullptr;
             usize _cap = 0;
             usize _len = 0;
