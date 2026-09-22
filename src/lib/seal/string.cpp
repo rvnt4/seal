@@ -279,7 +279,8 @@ namespace seal
 usize StringView::find(StringView needle, usize start) const noexcept
 {
     if (needle._size == 0) return start <= _size ? start : npos;
-    if (start + needle._size > _size) return npos;
+    if (start > _size) return npos;
+    if (needle._size > _size - start) return npos;
 
     for (usize i = start; i <= _size - needle._size; ++i)
         if (seal::memcmp(_data + i, needle._data, needle._size) == 0) return i;
