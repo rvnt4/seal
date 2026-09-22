@@ -16,30 +16,48 @@ extern "C"
     #include <sys/mman.h>
 #endif
 
-inline void* allocatePages(ssize bytes)
+namespace
 {
+    void* allocatePages(ssize bytes)
+    {
 #if defined(_WIN32)
-    // MEM_COMMIT | MEM_RESERVE = 0x1000 | 0x2000, PAGE_READWRITE = 0x04
-    return VirtualAlloc(nullptr, bytes, 0x3000, 0x04);
+        // MEM_COMMIT | MEM_RESERVE = 0x1000 | 0x2000, PAGE_READWRITE = 0x04
+        return VirtualAlloc(nullptr, bytes, 0x3000, 0x04);
 #elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
-    void* ptr = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    return (ptr == MAP_FAILED) ? nullptr : ptr;
+        void* ptr = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        return (ptr == MAP_FAILED) ? nullptr : ptr;
 #else
-    return nullptr;
+        (void)bytes;
+        return nullptr;
 #endif
-}
+    }
 
-inline void freePages(void* ptr, ssize bytes)
-{
-    if (!ptr) return;
+    void freePages(void* ptr, ssize bytes)
+    {
+        if (!ptr) return;
 #if defined(_WIN32)
-    (void)bytes;
-    // MEM_RELEASE = 0x8000
-    VirtualFree(ptr, 0, 0x8000);
+        (void)bytes;
+        // MEM_RELEASE = 0x8000
+        VirtualFree(ptr, 0, 0x8000);
 #elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
-    munmap(ptr, bytes);
+        munmap(ptr, bytes);
+#else
+        (void)bytes;
 #endif
-}
+    }
+
+    ssize normalizeAlignment(ssize alignment)
+    {
+        const ssize minAlign = static_cast<ssize>(alignof(void*));
+        if (alignment <= minAlign) return minAlign;
+        if (isPowerOfTwo(alignment)) return alignment;
+
+        ssize p = minAlign;
+        while (p < alignment)
+            p <<= 1;
+        return p;
+    }
+} // namespace
 
 /*
     dynamic heap allocator
@@ -67,19 +85,22 @@ DynamicHeapAllocator::~DynamicHeapAllocator()
 
 void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
 {
-    if (size == 0) return nullptr;
+    if (size <= 0) return nullptr;
+    if (size > (static_cast<ssize>(1) << 60)) return nullptr;
 
-    ssize total_size = HEADER_SIZE + alignUp(size, alignment);
+    const ssize eff_align = normalizeAlignment(alignment);
+    const ssize payload_size = alignUp(size, eff_align);
+    const ssize reserve = HEADER_SIZE + payload_size + eff_align + static_cast<ssize>(sizeof(void*));
 
-    BlockHeader* block = findBestFit(total_size);
+    BlockHeader* block = findBestFit(reserve);
 
     if (!block)
     {
-        ssize req_size = total_size + sizeof(PageChunk);
+        ssize req_size = reserve + static_cast<ssize>(sizeof(PageChunk));
         if (req_size < MIN_CHUNK_SIZE) req_size = MIN_CHUNK_SIZE;
 
         void* raw = allocatePages(req_size);
-        if (!raw) return nullptr; // out of mem
+        if (!raw) return nullptr;
 
         PageChunk* chunk = static_cast<PageChunk*>(raw);
         chunk->size = req_size;
@@ -89,7 +110,7 @@ void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
 
         unsigned char* block_start = static_cast<unsigned char*>(raw) + sizeof(PageChunk);
         block = reinterpret_cast<BlockHeader*>(block_start);
-        block->size = req_size - sizeof(PageChunk);
+        block->size = req_size - static_cast<ssize>(sizeof(PageChunk));
         block->requestedSize = 0;
         block->isFree = true;
         block->next = nullptr;
@@ -100,44 +121,55 @@ void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
         insertFreeBlock(block);
     }
 
-    splitBlock(block, total_size);
+    unsigned char* block_bytes = reinterpret_cast<unsigned char*>(block);
+    unsigned char* base = block_bytes + HEADER_SIZE;
+    unsigned char* data = reinterpret_cast<unsigned char*>(alignPtrUp(reinterpret_cast<sealptr>(base), eff_align));
+    if (data - base < static_cast<ssize>(sizeof(void*))) data += eff_align;
+
+    *reinterpret_cast<BlockHeader**>(data - sizeof(void*)) = block;
+
+    const ssize used = static_cast<ssize>(data - block_bytes) + payload_size;
+    splitBlock(block, used);
     removeFreeBlock(block);
 
     block->isFree = false;
     block->requestedSize = size;
     _totalAllocatedBytes += block->size;
 
-    unsigned char* block_ptr = reinterpret_cast<unsigned char*>(block);
-    return reinterpret_cast<void*>(block_ptr + HEADER_SIZE);
+    return data;
 }
 
 void* DynamicHeapAllocator::reallocate(void* ptr, ssize newSize, ssize alignment)
 {
     if (!ptr) return allocate(newSize, alignment);
 
-    if (newSize == 0)
+    if (newSize <= 0)
     {
         deallocate(ptr);
         return nullptr;
     }
 
-    unsigned char* p = static_cast<unsigned char*>(ptr);
-    BlockHeader* block = reinterpret_cast<BlockHeader*>(p - HEADER_SIZE);
+    const ssize eff_align = normalizeAlignment(alignment);
+    unsigned char* data = static_cast<unsigned char*>(ptr);
+    BlockHeader* block = *reinterpret_cast<BlockHeader**>(data - sizeof(void*));
 
-    ssize required_size = HEADER_SIZE + alignUp(newSize, alignment);
+    const ssize overhead = static_cast<ssize>(data - reinterpret_cast<unsigned char*>(block));
+    const ssize required = overhead + alignUp(newSize, eff_align);
 
-    if (block->size >= required_size)
+    if (block->size >= required)
     {
-        splitBlock(block, required_size);
+        const ssize old_size = block->size;
+        splitBlock(block, required);
+        _totalAllocatedBytes -= (old_size - block->size);
         block->requestedSize = newSize;
         return ptr;
     }
 
-    void* newPtr = allocate(newSize, alignment);
+    void* newPtr = allocate(newSize, eff_align);
     if (!newPtr) return nullptr;
-    
+
     ssize copySize = (newSize < block->requestedSize) ? newSize : block->requestedSize;
-    seal::memcpy(newPtr, ptr, copySize);
+    if (copySize > 0) seal::memcpy(newPtr, ptr, copySize);
 
     deallocate(ptr);
     return newPtr;
@@ -147,10 +179,13 @@ void DynamicHeapAllocator::deallocate(void* ptr)
 {
     if (!ptr) return;
 
-    unsigned char* p = static_cast<unsigned char*>(ptr);
-    BlockHeader* block = reinterpret_cast<BlockHeader*>(p - HEADER_SIZE);
+    unsigned char* data = static_cast<unsigned char*>(ptr);
+    BlockHeader* block = *reinterpret_cast<BlockHeader**>(data - sizeof(void*));
+
+    if (block->isFree) return;
 
     block->isFree = true;
+    block->requestedSize = 0;
     _totalAllocatedBytes -= block->size;
 
     insertFreeBlock(block);

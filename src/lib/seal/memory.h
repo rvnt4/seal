@@ -4,9 +4,15 @@
 
 namespace seal
 {
-    struct placement_t {};
+    struct placement_t
+    {
+    };
+} // namespace seal
+inline void* operator new(seal::usize size, void* ptr, seal::placement_t) noexcept
+{
+    (void)size;
+    return ptr;
 }
-inline void* operator new(seal::usize size, void* ptr, seal::placement_t) noexcept { return ptr; }
 inline void operator delete(void*, void*, seal::placement_t) noexcept {}
 
 namespace seal
@@ -35,6 +41,7 @@ namespace seal
     */
     inline void* memset(void* dest, int value, ssize count)
     {
+        if (count <= 0) return dest;
         auto* ptr = static_cast<unsigned char*>(dest);
         const auto val = static_cast<unsigned char>(value);
         for (ssize i = 0; i < count; ++i)
@@ -44,6 +51,7 @@ namespace seal
 
     inline void* memcpy(void* dest, const void* src, ssize count)
     {
+        if (count <= 0) return dest;
         auto* d = static_cast<unsigned char*>(dest);
         const auto* s = static_cast<const unsigned char*>(src);
         for (ssize i = 0; i < count; ++i)
@@ -53,12 +61,14 @@ namespace seal
 
     inline void* memmove(void* dest, const void* src, ssize count)
     {
+        if (dest == src || count <= 0) return dest;
         auto* d = static_cast<unsigned char*>(dest);
         const auto* s = static_cast<const unsigned char*>(src);
 
-        if (d == s || count == 0) return dest;
+        const sealptr d_addr = reinterpret_cast<sealptr>(d);
+        const sealptr s_addr = reinterpret_cast<sealptr>(s);
 
-        if (d < s)
+        if (d_addr < s_addr)
         {
             for (ssize i = 0; i < count; ++i)
                 d[i] = s[i];
@@ -84,6 +94,7 @@ namespace seal
 
     inline const void* memchr(const void* ptr, int ch, ssize count)
     {
+        if (!ptr || count <= 0) return nullptr;
         const auto* p = static_cast<const unsigned char*>(ptr);
         const auto c = static_cast<unsigned char>(ch);
         for (ssize i = 0; i < count; ++i)
@@ -100,6 +111,7 @@ namespace seal
 
     inline usize strlen(const char* s) noexcept
     {
+        if (!s) return 0;
         usize n = 0;
         while (s[n] != '\0')
             ++n;
@@ -111,22 +123,26 @@ namespace seal
     */
     inline constexpr bool isPowerOfTwo(ssize value)
     {
-        return value && !(value & (value - 1));
+        return value > 0 && !(value & (value - 1));
     }
 
     inline constexpr ssize alignUp(ssize value, ssize alignment)
     {
+        if (alignment <= 1) return value;
         return (value + alignment - 1) & ~(alignment - 1);
     }
 
     inline constexpr ssize alignDown(ssize value, ssize alignment)
     {
+        if (alignment <= 1) return value;
         return value & ~(alignment - 1);
     }
 
     inline sealptr alignPtrUp(sealptr ptr, ssize alignment)
     {
-        return (ptr + alignment - 1) & ~(alignment - 1);
+        if (alignment <= 1) return ptr;
+        const sealptr mask = static_cast<sealptr>(alignment) - 1;
+        return (ptr + mask) & ~mask;
     }
 
     /*
@@ -187,39 +203,41 @@ namespace seal
             ArenaAllocator(const ArenaAllocator&) = delete;
             ArenaAllocator& operator=(const ArenaAllocator&) = delete;
 
-            ArenaAllocator(ArenaAllocator&&) noexcept = default;
-            ArenaAllocator& operator=(ArenaAllocator&&) noexcept = default;
+            ArenaAllocator(ArenaAllocator&&) = delete;
+            ArenaAllocator& operator=(ArenaAllocator&&) = delete;
 
             void* allocate(ssize size, ssize alignment = 8) override
             {
-                if (size == 0) return nullptr;
+                if (size <= 0) return nullptr;
 
-                sealptr current_ptr = reinterpret_cast<sealptr>(_heap + _offset);
-                sealptr aligned_ptr = alignPtrUp(current_ptr, alignment);
-                ssize shift = aligned_ptr - current_ptr;
+                const sealptr current_ptr = reinterpret_cast<sealptr>(_heap + _offset);
+                const sealptr aligned_ptr = alignPtrUp(current_ptr, alignment);
+                const ssize shift = static_cast<ssize>(aligned_ptr - current_ptr);
 
-                if (_offset + shift + size > Capacity) return nullptr; // out of mem
+                if (shift < 0 || _offset + shift + size > Capacity) return nullptr; // out of mem
 
                 _offset += shift + size;
                 return reinterpret_cast<void*>(aligned_ptr);
             }
 
-            virtual void* reallocate(void* ptr, ssize newSize, ssize alignment = 8) override
+            void* reallocate(void* ptr, ssize newSize, ssize alignment = 8) override
             {
                 if (!ptr) return allocate(newSize, alignment);
-                if (newSize == 0) return nullptr;
+                if (newSize <= 0) return nullptr;
 
                 void* newPtr = allocate(newSize, alignment);
                 if (newPtr)
                 {
-                    ssize maxCopy = Capacity - (static_cast<unsigned char*>(ptr) - _heap);
+                    ssize offset = static_cast<ssize>(static_cast<unsigned char*>(ptr) - _heap);
+                    ssize maxCopy = Capacity - offset;
+                    if (maxCopy < 0) maxCopy = 0;
                     ssize copySize = (newSize < maxCopy) ? newSize : maxCopy;
-                    seal::memcpy(newPtr, ptr, copySize);
+                    if (copySize > 0) seal::memcpy(newPtr, ptr, copySize);
                 }
                 return newPtr;
             }
 
-            void deallocate(void* ptr) override { ptr; }
+            void deallocate(void* ptr) override { (void)ptr; }
             void reset() { _offset = 0; }
 
             ssize getAllocatedSize() const override { return _offset; }
@@ -294,25 +312,44 @@ namespace seal
         private:
             struct ControlBlock
             {
-                    T* ptr;
+                    T* ptr;    // typed pointer used for destruction
+                    void* raw; // original allocation address used for deallocation
                     usize ref_count;
                     IAllocator* alloc;
             };
 
             ControlBlock* _cb = nullptr;
 
+            void destroyBlock() noexcept
+            {
+                if (!_cb) return;
+                IAllocator* alloc = _cb->alloc;
+                if (_cb->ptr) _cb->ptr->~T();
+                if (_cb->raw) alloc->deallocate(_cb->raw);
+                alloc->deallocate(_cb);
+            }
+
         public:
             constexpr SharedPtr() noexcept = default;
 
-            explicit SharedPtr(T* ptr, IAllocator* alloc) noexcept
+            explicit SharedPtr(T* ptr, IAllocator* alloc) noexcept : SharedPtr(ptr, static_cast<void*>(ptr), alloc) {}
+
+            SharedPtr(T* ptr, void* rawPtr, IAllocator* alloc) noexcept
             {
                 if (!ptr || !alloc) return;
+                void* raw = rawPtr ? rawPtr : static_cast<void*>(ptr);
                 _cb = static_cast<ControlBlock*>(alloc->allocate(sizeof(ControlBlock), alignof(ControlBlock)));
                 if (_cb)
                 {
                     _cb->ptr = ptr;
+                    _cb->raw = raw;
                     _cb->ref_count = 1;
                     _cb->alloc = alloc;
+                }
+                else
+                {
+                    ptr->~T();
+                    alloc->deallocate(raw);
                 }
             }
 
@@ -352,18 +389,16 @@ namespace seal
             T& operator*() const noexcept { return *get(); }
             explicit operator bool() const noexcept { return get() != nullptr; }
 
+            usize use_count() const noexcept { return _cb ? _cb->ref_count : 0; }
+
+            void reset() noexcept { release(); }
+
         private:
             void release() noexcept
             {
                 if (_cb)
                 {
-                    if (--_cb->ref_count == 0)
-                    {
-                        IAllocator* alloc = _cb->alloc;
-                        _cb->ptr->~T();
-                        alloc->deallocate(_cb->ptr);
-                        alloc->deallocate(_cb);
-                    }
+                    if (--_cb->ref_count == 0) destroyBlock();
                     _cb = nullptr;
                 }
             }
