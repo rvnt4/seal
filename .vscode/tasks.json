@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create project with test solution",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "windows": {
+                "command": "${workspaceRoot}\\scripts\\create-test.ps1"
+            },
+        },
+        {
+            "label": "Format code",
+            "type": "shell",
+            "group": {
+                "kind": "none",
+            },
+            "windows": {
+                "command": "${workspaceRoot}\\scripts\\format-code.ps1"
+            },
+        }
+    ],
+}
