@@ -1,0 +1,74 @@
+#pragma once
+
+#include "types.h"
+#include "memory.h"
+
+namespace seal
+{
+    void setStringAllocator(IAllocator* alloc) noexcept;
+
+
+    class String
+    {
+        public:
+            static constexpr usize npos = static_cast<usize>(-1);
+            static constexpr usize sso_capacity = 22;
+
+            String() noexcept;
+            String(const char* s) noexcept;
+            String(const char* s, usize len) noexcept;
+            String(const String& other) noexcept;
+            String(String&& other) noexcept;
+            String& operator=(const String& other) noexcept;
+            String& operator=(String&& other) noexcept;
+
+            ~String() noexcept;
+
+            [[nodiscard]] bool reserve(usize new_cap) noexcept;
+            [[nodiscard]] bool resize(usize new_len, char fill = '\0') noexcept;
+            [[nodiscard]] bool append(const char* s, usize len) noexcept;
+            [[nodiscard]] bool append(const String& other) noexcept;
+            [[nodiscard]] bool push_back(char c) noexcept;
+            void pop_back() noexcept;
+            void clear() noexcept;
+
+            char& operator[](usize idx) noexcept { return data_mut()[idx]; }
+            const char& operator[](usize idx) const noexcept { return c_str()[idx]; }
+            bool at(usize idx, char& out) const noexcept;
+
+            const char* c_str() const noexcept { return is_heap_ ? repr_.heap.data : repr_.sso; }
+            const char* data() const noexcept { return c_str(); }
+            usize size() const noexcept { return len_; }
+            usize length() const noexcept { return len_; }
+            usize capacity() const noexcept { return is_heap_ ? repr_.heap.cap : sso_capacity; }
+            bool empty() const noexcept { return len_ == 0; }
+            bool is_sso() const noexcept { return !is_heap_; }
+
+            usize find(const char* needle, usize start = 0) const noexcept;
+            String substr(usize pos, usize len = npos) const noexcept;
+            int compare(const String& other) const noexcept;
+
+            void swap(String& other) noexcept;
+
+        private:
+            union Repr {
+                    struct
+                    {
+                            char* data;
+                            usize cap;
+                    } heap;
+                    char sso[sso_capacity + 1];
+            };
+            Repr repr_;
+            usize len_ = 0;
+            bool is_heap_ = false;
+
+            char* data_mut() noexcept { return is_heap_ ? repr_.heap.data : repr_.sso; }
+            bool grow_to(usize needed) noexcept;
+            void free_heap() noexcept;
+    };
+
+    bool operator==(const String& a, const String& b) noexcept;
+    bool operator!=(const String& a, const String& b) noexcept;
+    bool operator<(const String& a, const String& b) noexcept;
+} // namespace seal
