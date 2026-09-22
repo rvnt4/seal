@@ -159,6 +159,36 @@ class MemTest : public ITest
             }
 
             /*
+                alignment must be honoured for the very first allocation too
+            */
+            this->logInfo("testing DynamicHeapAllocator alignment on first allocation");
+
+            seal::DynamicHeapAllocator alignHeap;
+            void* a16 = alignHeap.allocate(32, 16);
+            void* a64 = alignHeap.allocate(48, 64);
+            void* a8 = alignHeap.allocate(1, 8);
+            void* a128 = alignHeap.allocate(16, 128);
+
+            if (!a16 || (reinterpret_cast<seal::sealptr>(a16) % 16) != 0 ||
+                !a64 || (reinterpret_cast<seal::sealptr>(a64) % 64) != 0 ||
+                !a8 || (reinterpret_cast<seal::sealptr>(a8) % 8) != 0 ||
+                !a128 || (reinterpret_cast<seal::sealptr>(a128) % 128) != 0)
+            {
+                this->logError("DynamicHeapAllocator alignment failed on first allocation");
+                return;
+            }
+
+            alignHeap.deallocate(a16);
+            alignHeap.deallocate(a64);
+            alignHeap.deallocate(a8);
+            alignHeap.deallocate(a128);
+
+            if (alignHeap.getAllocatedSize() != 0)
+            {
+                this->logError("DynamicHeapAllocator alignment accounting mismatch");
+                return;
+            }
+
             this->logInfo("all memory tests passed successfully");
         }
 
