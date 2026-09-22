@@ -152,6 +152,13 @@ class MemTest : public ITest
             heap.deallocate(h2);
             heap.deallocate(h3);
 
+            if (heap.getAllocatedSize() != 0)
+            {
+                this->logError("DynamicHeapAllocator accounting drifted after frees");
+                return;
+            }
+
+            /*
             this->logInfo("all memory tests passed successfully");
         }
 
