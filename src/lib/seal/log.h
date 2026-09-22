@@ -13,17 +13,21 @@ namespace seal
         ERROR
     };
 
+    inline constexpr usize logTypeCount = 4;
+
     inline constexpr StringView logTypeNames[]{"VERBOSE", "INFO", "WARNING", "ERROR"};
     inline constexpr StringView logTypeColors[]{"\x1b[34;40m", "\x1b[32;40m", "\x1b[30;43m", "\x1b[97;41m"};
 
     inline constexpr StringView getLogTypeName(LogType type)
     {
-        return logTypeNames[static_cast<usize>(type)];
+        const usize idx = static_cast<usize>(type);
+        return idx < logTypeCount ? logTypeNames[idx] : StringView("UNKNOWN");
     }
 
     inline constexpr StringView getLogTypeColor(LogType type)
     {
-        return logTypeColors[static_cast<usize>(type)];
+        const usize idx = static_cast<usize>(type);
+        return idx < logTypeCount ? logTypeColors[idx] : StringView("\x1b[0m");
     }
 
     class ILogSink
@@ -36,40 +40,45 @@ namespace seal
     class Logger
     {
         public:
-            explicit Logger(StringView name, IAllocator* alloc = nullptr) : _name(name.data(), name.size()), _sinks(alloc) {}
+            explicit Logger(StringView name, IAllocator* alloc = nullptr)
+                : _name(name.data(), name.size(), alloc), _sinks(alloc), _alloc(alloc)
+            {
+            }
 
             template <typename... Args> void verbose(StringView fmt, const Args&... args)
             {
-                write(LogType::VERBOSE, format(fmt, args...));
+                write(LogType::VERBOSE, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void info(StringView fmt, const Args&... args)
             {
-                write(LogType::INFO, format(fmt, args...));
+                write(LogType::INFO, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void warning(StringView fmt, const Args&... args)
             {
-                write(LogType::WARNING, format(fmt, args...));
+                write(LogType::WARNING, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void error(StringView fmt, const Args&... args)
             {
-                write(LogType::ERROR, format(fmt, args...));
+                write(LogType::ERROR, format(_alloc, fmt, args...));
             }
 
             [[nodiscard]] StringView getName() const { return _name; }
 
-            void addSink(SharedPtr<ILogSink> sink) { _sinks.push_back(sink); }
+            [[nodiscard]] bool addSink(SharedPtr<ILogSink> sink) { return _sinks.push_back(static_cast<SharedPtr<ILogSink>&&>(sink)); }
+
+            [[nodiscard]] usize sinkCount() const { return _sinks.size(); }
 
         protected:
             void write(LogType type, const String& message)
             {
-                for (auto* sink = _sinks.begin(); sink != _sinks.end(); ++sink)
+                for (usize i = 0; i < _sinks.size(); ++i)
                 {
-                    if (*sink)
+                    if (_sinks[i])
                     {
-                        (*sink)->receiveLog(type, _name, StringView(message));
+                        _sinks[i]->receiveLog(type, _name, StringView(message));
                     }
                 }
             }
@@ -77,5 +86,6 @@ namespace seal
         private:
             String _name;
             Vector<SharedPtr<ILogSink>> _sinks;
+            IAllocator* _alloc;
     };
 } // namespace seal
