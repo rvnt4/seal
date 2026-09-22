@@ -84,6 +84,8 @@ namespace seal
                 _len = 0;
             }
 
+            bool empty() const noexcept { return _len == 0; }
+
             void pop_back() noexcept
             {
                 if (_len > 0)
