@@ -91,6 +91,14 @@ namespace seal
         return const_cast<void*>(memchr(static_cast<const void*>(ptr), ch, count));
     }
 
+    inline usize strlen(const char* s) noexcept
+    {
+        usize n = 0;
+        while (s[n] != '\0')
+            ++n;
+        return n;
+    }
+
     /*
         alignment functions
     */
