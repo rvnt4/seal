@@ -9,6 +9,7 @@ project(seal LANGUAGES CXX)
 # ------------------------------
 option(SEAL_MEM "Use memory library" OFF)
 option(SEAL_STRING "Use string library" OFF)
+option(SEAL_VECTOR "Use vector library" OFF)
 
 option(SEAL_TEST "Build test project" OFF)
 
@@ -17,8 +18,13 @@ if (SEAL_STRING)
  set(SEAL_MEM ON CACHE BOOL "" FORCE)
 endif() 
 
+# vec depends on mem
+if (SEAL_VECTOR)
+ set(SEAL_MEM ON CACHE BOOL "" FORCE)
+endif() 
+
 if (SEAL_TEST) 
-    set(ALL_LIBS SEAL_MEM SEAL_STRING)
+    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR)
     foreach(lib ${ALL_LIBS})
         set(${lib} ON CACHE BOOL "" FORCE)
     endforeach()
@@ -38,6 +44,11 @@ endif()
 if (SEAL_STRING)
     list(APPEND SEAL_SOURCES "src/lib/seal/string.cpp" "src/lib/seal/string.h")
     list(APPEND SEAL_TEST_SOURCES "src/test/tests/string.cpp")
+endif()
+
+if (SEAL_VECTOR)
+    list(APPEND SEAL_SOURCES "src/lib/seal/vector.h")
+    list(APPEND SEAL_TEST_SOURCES "src/test/tests/vector.cpp")
 endif()
 
 # ------------------------------
