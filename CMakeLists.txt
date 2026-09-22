@@ -7,7 +7,17 @@ project(seal LANGUAGES CXX)
 # ------------------------------
 # options
 # ------------------------------
+option(SEAL_MEM "Use memory library" OFF)
+
 option(SEAL_TEST "Build test project" OFF)
+
+if (SEAL_TEST) 
+    set(ALL_LIBS SEAL_MEM)
+    foreach(lib ${ALL_LIBS})
+        set(${lib} ON CACHE BOOL "" FORCE)
+    endforeach()
+endif()
+
 # ------------------------------
 # sources
 # ------------------------------
