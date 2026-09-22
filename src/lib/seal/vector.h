@@ -84,6 +84,15 @@ namespace seal
                 _len = 0;
             }
 
+            void pop_back() noexcept
+            {
+                if (_len > 0)
+                {
+                    _len--;
+                    _data[_len].~T();
+                }
+            }
+
             T* begin() noexcept { return _data; }
             T* end() noexcept { return _data + _len; }
             const T* begin() const noexcept { return _data; }
