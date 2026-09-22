@@ -14,6 +14,7 @@ option(SEAL_FMT "Use format library" OFF)
 option(SEAL_LOG "Use log library" OFF)
 option(SEAL_VFS "Use virtual file system" OFF)
 option(SEAL_EVENTS "Use events library" OFF)
+option(SEAL_ASSERT "Use assertion utility" OFF)
 
 option(SEAL_TEST "Build test project" OFF)
 
@@ -52,8 +53,8 @@ if (SEAL_EVENTS)
 endif()
 
 # all libs for test
-if (SEAL_TEST) 
-    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT SEAL_LOG SEAL_VFS SEAL_EVENTS)
+if (SEAL_TEST)
+    set(ALL_LIBS SEAL_MEM SEAL_STRING SEAL_VECTOR SEAL_FMT SEAL_LOG SEAL_VFS SEAL_EVENTS SEAL_ASSERT)
     foreach(lib ${ALL_LIBS})
         set(${lib} ON CACHE BOOL "" FORCE)
     endforeach()
@@ -100,6 +101,10 @@ if (SEAL_EVENTS)
     list(APPEND SEAL_TEST_SOURCES "src/test/tests/events.cpp")
 endif()
 
+if (SEAL_ASSERT)
+    list(APPEND SEAL_SOURCES "src/lib/seal/assert.cpp" "src/lib/seal/assert.h")
+    list(APPEND SEAL_TEST_SOURCES "src/test/tests/assert.cpp")
+endif()
 
 # ------------------------------
 # lib
