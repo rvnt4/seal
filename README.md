@@ -8,6 +8,13 @@
 
 ## Table of Contents
 * [Installation & Integration](#installation--integration)
+* [Build Options](#build-options)
+* [Modules](#modules)
+  * [Logging](#1-logging)
+  * [Assert](#2-assert)
+  * [Events](#3-events)
+  * [VFS](#4-vfs)
+* [Running tests](#running-tests)
 
 ## Installation & Integration
 
@@ -34,7 +41,7 @@ set(SEAL_ASSERT OFF)
 
 FetchContent_MakeAvailable(seal)
 
-target_link_libraries(your_project PRIVATE seal)
+target_link_libraries(your_project PRIVATE seal::seal)
 ```
 
 #### Option B: Local Path
@@ -46,27 +53,40 @@ set(SEAL_ASSERT OFF)
 
 add_subdirectory(path/to/seal)
 
-target_link_libraries(your_project PRIVATE seal)
+target_link_libraries(your_project PRIVATE seal::seal)
 ```
+
+> `seal::seal` is an alias for the `seal` target; both work, but the namespaced form is preferred to avoid collisions with consumer targets.
 
 ---
 
 ## Build Options
 Toggle features by setting these variables to ``ON`` or ``OFF`` in your CMake configuration.
+
 | Option | Description | Default |
 | :--- | :--- | :--- |
-| SEAL_ASSERT | Enable Assertion utility | OFF |
-| SEAL_EVENTS | Enable Event Dispatcher | OFF |
-| SEAL_LOG | Enable Logging Framework | OFF |
-| SEAL_VFS | Enable Virtual File System | OFF |
-| SEAL_TEST | Build the test project | OFF |
+| SEAL_MEM | Memory utilities and allocators (arena + dynamic heap) | OFF |
+| SEAL_STRING | `String` / `StringView` (implies `SEAL_MEM`) | OFF |
+| SEAL_VECTOR | `Vector` container (implies `SEAL_MEM`) | OFF |
+| SEAL_FMT | Formatting helpers (implies `SEAL_STRING`) | OFF |
+| SEAL_LOG | Logging framework (implies `SEAL_FMT`, `SEAL_VECTOR`) | OFF |
+| SEAL_VFS | Virtual File System (implies `SEAL_STRING`, `SEAL_VECTOR`, `SEAL_MEM`) | OFF |
+| SEAL_EVENTS | Event Dispatcher (implies `SEAL_VECTOR`, `SEAL_MEM`) | OFF |
+| SEAL_ASSERT | Assertion utilities | OFF |
+| SEAL_TEST | Build the test project (enables every module) | OFF |
+
+> **String allocator:** the string module uses a process-wide allocator pointer. Call
+> `seal::setStringAllocator(&yourAllocator)` before creating heap-backed strings. Each
+> `String` captures the allocator it was created with, so later changing (or clearing)
+> the global pointer does not invalidate existing strings.
 
 ---
 
 ## Modules
 
 ### 1. Logging
-The Log module uses a sink architecture. You create a Logger, attach an ILogSink, and log messages using std::format syntax.
+The Log module uses a sink architecture. You create a Logger, attach an ILogSink, and log messages using `{}` placeholders.
+> **Note:** formatting supports only `{}` placeholders (no width/precision specifiers or positional arguments). Floating point values are always rendered with six fractional digits (e.g. `1.0` -> `1.000000`).
 
 #### Example
 ```C++
@@ -110,10 +130,13 @@ int main() {
 The assert module provides diagnostic macros made to trap critical logic failures.
 
 #### Macros and their behavior
-| Macro | Debug Mode (`_DEBUG`) | Release Mode |
+| Macro | Debug builds (`NDEBUG` undefined) | Release builds (`NDEBUG` defined) |
 | :--- | :--- | :--- |
-| `ASSERT(cond, msg)` | Evaluates `cond`. If `false`, logs the error location, pops up an error box, drops a debugger breakpoint trap, and calls `std::exit`. | Evaluates to a compiler optimization hint informing the optimizer that `cond` is always `true`. |
-| `PANIC(msg)` | Logs the error, displays an error box, breaks execution, and terminates. | Logs the error, displays an error box, breaks execution, and terminates. **Always halts execution.** |
+| `ASSERT(cond, msg)` | Evaluates `cond`; if `false`, logs the error location, pops up an error box, drops a debugger breakpoint trap, and terminates the process via `seallib::fatalExit()`. | Evaluates to a compiler optimization hint (`SEALLIB_ASSUME`) informing the optimizer that `cond` is always `true`. |
+| `PANIC(msg)` | Logs the error, displays an error box, breaks execution, and terminates the process. | Same as debug. **Always halts execution.** |
+
+> Assertions are gated on `NDEBUG` so they behave consistently across MSVC, GCC and Clang. `cond` must be free of side effects, because in release builds some compilers do not evaluate it.
+
 #### Example
 ```c++
 #include <seal/assert.h>
@@ -154,7 +177,9 @@ int main() {
 ```
 
 ### 3. Events
-The Events module provides a thread and type safe signal/slot mechanism. It allows you to define custom events with any number of parameters and subscribe to them using delegates.
+The Events module provides a type safe signal/slot mechanism. It allows you to define custom events with any number of parameters and subscribe to them using delegates.
+> **Note:** the event dispatcher is **not** thread safe (neither is `SharedPtr`, whose refcount is non-atomic). Arguments are passed to every listener by const reference, and listeners may safely add or remove subscriptions while the event is being dispatched (removals are deferred until dispatch completes).
+
 #### Example
 ```cpp
 #include <seal/events.h>
@@ -206,6 +231,10 @@ using namespace seal;
 
 class MyCustomProvider : public IFileProvider {
 public:
+    IAllocator* allocator;
+
+    explicit MyCustomProvider(IAllocator* alloc) : allocator(alloc) {}
+
     // checks if file exists
     bool exists(StringView path) const override {
         /*
@@ -270,7 +299,7 @@ int main() {
         higher priority (10 in this case) means this mount is checked before others
     */
     void* mem = allocator.allocate(sizeof(MyCustomProvider), alignof(MyCustomProvider));
-    MyCustomProvider* provider = new (mem, placement_t{}) MyCustomProvider();
+    MyCustomProvider* provider = new (mem, placement_t{}) MyCustomProvider(&allocator);
     SharedPtr<IFileProvider> p(provider, &allocator);
 
     vfs.mount(StringView("/assets"), p, 10);
@@ -292,7 +321,9 @@ int main() {
 ### Windows (PowerShell + Visual Studio)
 A script is provided to automate generation and open the solution in Visual Studio:
 
-./create-test.ps1
+```powershell
+./scripts/create-test.ps1
+```
 
 ### Cross-Platform (CLI)
 To build and run manually from the terminal:
@@ -303,6 +334,8 @@ cmake .. -DSEAL_TEST=ON
 cmake --build .
 ./seal-test
 ```
+
+The test runner returns a non-zero exit code when any test reports a failure, so it can be wired directly into CI.
 
 ## License
 
