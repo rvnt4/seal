@@ -21,7 +21,7 @@ endif()
 # ------------------------------
 # sources
 # ------------------------------
-set(SEAL_SOURCES "")
+set(SEAL_SOURCES "src/lib/seal/types.h")
 set(SEAL_TEST_SOURCES "src/test/main.cpp" "src/test/tests.h")
 
 if (SEAL_MEM)
