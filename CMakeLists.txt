@@ -1,7 +1,7 @@
 # ------------------------------
 # cmake project
 # ------------------------------
-cmake_minimum_required(VERSION 4.1.0)
+cmake_minimum_required(VERSION 3.16)
 project(seal LANGUAGES CXX)
 
 # ------------------------------
@@ -32,12 +32,12 @@ endif()
 # str depends on mem
 if (SEAL_STRING)
     set(SEAL_MEM ON CACHE BOOL "" FORCE)
-endif() 
+endif()
 
 # vec depends on mem
 if (SEAL_VECTOR)
     set(SEAL_MEM ON CACHE BOOL "" FORCE)
-endif() 
+endif()
 
 # vfs depends on str, vec, mem
 if (SEAL_VFS)
@@ -134,10 +134,22 @@ else()
 endif()
 
 # config
-set_target_properties(seal PROPERTIES LINKER_LANGUAGE CXX)
-target_include_directories(seal ${SEAL_SCOPE} src/lib)
+if(SEAL_HAS_SOURCES)
+    set_target_properties(seal PROPERTIES LINKER_LANGUAGE CXX)
+endif()
+target_include_directories(seal ${SEAL_SCOPE}
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lib>"
+    "$<INSTALL_INTERFACE:include>")
 target_compile_features(seal ${SEAL_SCOPE} cxx_std_20)
 set_target_properties(seal PROPERTIES CXX_EXTENSIONS OFF)
+
+if(SEAL_HAS_SOURCES)
+    if(MSVC)
+        target_compile_options(seal PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(seal PRIVATE -Wall -Wextra)
+    endif()
+endif()
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src/lib" FILES ${SEAL_SOURCES})
 
@@ -148,5 +160,12 @@ if (SEAL_TEST)
     add_executable(seal-test ${SEAL_TEST_SOURCES})
     target_include_directories(seal-test PRIVATE "src/test")
     target_link_libraries(seal-test PRIVATE seal)
+
+    if(MSVC)
+        target_compile_options(seal-test PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(seal-test PRIVATE -Wall -Wextra)
+    endif()
+
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src/test" FILES ${SEAL_TEST_SOURCES})
 endif()
