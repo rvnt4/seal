@@ -239,3 +239,24 @@ namespace seal
         return a.compare(b) < 0;
     }
 } // namespace seal
+
+/*
+    stringview impl
+*/
+usize StringView::find(StringView needle, usize start) const noexcept
+{
+    if (needle._size == 0) return start <= _size ? start : npos;
+    if (start + needle._size > _size) return npos;
+
+    for (usize i = start; i <= _size - needle._size; ++i)
+        if (seal::memcmp(_data + i, needle._data, needle._size) == 0) return i;
+
+    return npos;
+}
+
+StringView StringView::substr(usize pos, usize count) const noexcept
+{
+    if (pos >= _size) return {};
+    usize rcount = (count < _size - pos) ? count : _size - pos;
+    return StringView(_data + pos, rcount);
+}
