@@ -96,6 +96,23 @@ namespace seal
         [[nodiscard]] usize find(StringView needle, usize start = 0) const noexcept;
         [[nodiscard]] StringView substr(usize pos, usize count = npos) const noexcept;
 
+        [[nodiscard]] constexpr bool starts_with(StringView prefix) const noexcept
+        {
+            if (prefix._size > _size) return false;
+            for (usize i = 0; i < prefix._size; ++i)
+                if (_data[i] != prefix._data[i]) return false;
+            return true;
+        }
+
+        [[nodiscard]] constexpr bool ends_with(StringView suffix) const noexcept
+        {
+            if (suffix._size > _size) return false;
+            const usize offset = _size - suffix._size;
+            for (usize i = 0; i < suffix._size; ++i)
+                if (_data[offset + i] != suffix._data[i]) return false;
+            return true;
+        }
+
     private:
         static constexpr usize strLen(const char* s) noexcept
         {
