@@ -104,4 +104,19 @@ namespace seal
         const char* _data = nullptr;
         usize _size = 0;
     };
+
+    inline constexpr bool operator==(StringView a, StringView b) noexcept
+    {
+        if (a.size() != b.size()) return false;
+        for (usize i = 0; i < a.size(); ++i)
+        {
+            if (a.data()[i] != b.data()[i]) return false;
+        }
+        return true;
+    }
+
+    inline constexpr bool operator!=(StringView a, StringView b) noexcept
+    {
+        return !(a == b);
+    }
 } // namespace seal
