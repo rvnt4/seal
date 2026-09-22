@@ -84,6 +84,9 @@ namespace seal
                 _len = 0;
             }
 
+            T& operator[](usize idx) noexcept { return _data[idx]; }
+            const T& operator[](usize idx) const noexcept { return _data[idx]; }
+
             bool empty() const noexcept { return _len == 0; }
 
             void pop_back() noexcept
