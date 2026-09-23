@@ -66,6 +66,48 @@ namespace seal
                 return true;
             }
 
+            bool insert(usize idx, const T& item) noexcept
+            {
+                if (idx > _len) return false;
+                if (!ensure_capacity()) return false;
+                if (idx < _len)
+                {
+                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
+                    for (usize i = _len - 1; i > idx; --i)
+                    {
+                        _data[i] = static_cast<T&&>(_data[i - 1]);
+                    }
+                    _data[idx] = item;
+                }
+                else
+                {
+                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(item);
+                }
+                _len++;
+                return true;
+            }
+
+            bool insert(usize idx, T&& item) noexcept
+            {
+                if (idx > _len) return false;
+                if (!ensure_capacity()) return false;
+                if (idx < _len)
+                {
+                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
+                    for (usize i = _len - 1; i > idx; --i)
+                    {
+                        _data[i] = static_cast<T&&>(_data[i - 1]);
+                    }
+                    _data[idx] = static_cast<T&&>(item);
+                }
+                else
+                {
+                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(item));
+                }
+                _len++;
+                return true;
+            }
+
             bool reserve(usize new_cap) noexcept
             {
                 if (new_cap <= _cap) return true;
