@@ -90,6 +90,7 @@ class EventTest : public ITest
 
             auto id1 = ev.addListener(d1);
             auto id2 = ev.addListener(d2);
+            id2; // unused
 
             ev.run(200);
 

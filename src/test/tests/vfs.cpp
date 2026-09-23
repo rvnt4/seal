@@ -48,12 +48,12 @@ class MockProvider : public seal::IFileProvider
             return seal::VFSResult::FileNotFound;
         }
 
-        seal::VFSResult createDirectory(seal::StringView path) override
+        seal::VFSResult createDirectory(seal::StringView /*path*/) override
         {
             return seal::VFSResult::Success;
         }
 
-        seal::Vector<seal::String> listDirectory(seal::StringView path, seal::IAllocator* a) const override
+        seal::Vector<seal::String> listDirectory(seal::StringView /*path*/, seal::IAllocator* a) const override
         {
             seal::Vector<seal::String> res(a);
             for (seal::usize i = 0; i < files.size(); ++i)
