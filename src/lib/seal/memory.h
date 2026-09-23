@@ -403,4 +403,14 @@ namespace seal
                 }
             }
     };
+
+    template <typename T, typename... Args>
+    SharedPtr<T> makeShared(IAllocator* alloc, Args&&... args) noexcept
+    {
+        if (!alloc) return SharedPtr<T>();
+        void* raw = alloc->allocate(sizeof(T), alignof(T));
+        if (!raw) return SharedPtr<T>();
+        T* obj = ::new (raw, seal::placement_t{}) T(static_cast<Args&&>(args)...);
+        return SharedPtr<T>(obj, raw, alloc);
+    }
 } // namespace seal
