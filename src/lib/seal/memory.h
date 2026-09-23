@@ -393,6 +393,11 @@ namespace seal
 
             void reset() noexcept { release(); }
 
+            template <typename U> bool operator==(const SharedPtr<U>& other) const noexcept { return get() == other.get(); }
+            template <typename U> bool operator!=(const SharedPtr<U>& other) const noexcept { return get() != other.get(); }
+            bool operator==(decltype(nullptr)) const noexcept { return get() == nullptr; }
+            bool operator!=(decltype(nullptr)) const noexcept { return get() != nullptr; }
+
         private:
             void release() noexcept
             {
