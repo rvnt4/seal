@@ -96,6 +96,25 @@ class FormatTest : public ITest
                 return this->logError("format float precision failed"); // test truncation not rounding
 
             /*
+                hexadecimal
+            */
+            this->logInfo("testing hexadecimal format");
+            seal::String sHexLower = seal::format("{:x}", 255);
+            if (sHexLower != seal::String("ff")) return this->logError("format hex lowercase failed");
+
+            seal::String sHexUpper = seal::format("{:X}", 255);
+            if (sHexUpper != seal::String("FF")) return this->logError("format hex uppercase failed");
+
+            seal::String sHexZero = seal::format("{:X}", 0);
+            if (sHexZero != seal::String("0")) return this->logError("format hex with 0 failed");
+
+            seal::String sHex64 = seal::format("0x{:X}", 0xDEADBEEFCAFEULL);
+            if (sHex64 != seal::String("0xDEADBEEFCAFE")) return this->logError("format 64-bit hex failed");
+
+            seal::String sHexPad = seal::format("{:08X}", 0x1A2B);
+            if (sHexPad != seal::String("00001A2B")) return this->logError("format hex padding failed");
+
+            /*
                 pointers
             */
             this->logInfo("testing pointer formatting");

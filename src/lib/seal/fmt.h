@@ -251,7 +251,59 @@ namespace seal
             char align = '\0'; // '<' left, '>' right, '^' center, '\0' default
             int width = 0;
             int precision = -1; // -1 = not specified
+            char type = '\0';
     };
+
+    template <typename T>
+    inline void formatArgWithSpec(String& out, const T& val, const FormatSpec& /*spec*/)
+    {
+        formatArg(out, val);
+    }
+
+    inline void formatArgWithSpec(String& out, unsigned long long val, const FormatSpec& spec)
+    {
+        if (spec.type == 'x' || spec.type == 'X')
+        {
+            if (val == 0)
+            {
+                (void)out.push_back('0');
+                return;
+            }
+            char buf[32];
+            usize i = 0;
+            while (val > 0)
+            {
+                const unsigned d = static_cast<unsigned>(val & 0xF);
+                buf[i++] = (d < 10) ? static_cast<char>('0' + d) : 
+                           (spec.type == 'X' ? static_cast<char>('A' + (d - 10)) : static_cast<char>('a' + (d - 10)));
+                val >>= 4;
+            }
+            for (usize j = 0; j < i / 2; ++j)
+            {
+                char tmp = buf[j];
+                buf[j] = buf[i - 1 - j];
+                buf[i - 1 - j] = tmp;
+            }
+            (void)out.append(buf, i);
+            return;
+        }
+        formatArg(out, val);
+    }
+
+    inline void formatArgWithSpec(String& out, long long val, const FormatSpec& spec)
+    {
+        if (spec.type == 'x' || spec.type == 'X')
+        {
+            formatArgWithSpec(out, static_cast<unsigned long long>(val), spec);
+            return;
+        }
+        formatArg(out, val);
+    }
+
+    inline void formatArgWithSpec(String& out, int val, const FormatSpec& spec) { formatArgWithSpec(out, static_cast<long long>(val), spec); }
+    inline void formatArgWithSpec(String& out, unsigned int val, const FormatSpec& spec) { formatArgWithSpec(out, static_cast<unsigned long long>(val), spec); }
+    inline void formatArgWithSpec(String& out, long val, const FormatSpec& spec) { formatArgWithSpec(out, static_cast<long long>(val), spec); }
+    inline void formatArgWithSpec(String& out, unsigned long val, const FormatSpec& spec) { formatArgWithSpec(out, static_cast<unsigned long long>(val), spec); }
 
     /*
         type erased argument wrapper for positional access
@@ -259,12 +311,12 @@ namespace seal
     struct FormatArg
     {
             const void* data;
-            void (*write)(String&, const void*);
+            void (*write)(String&, const void*, const FormatSpec&);
     };
 
     template <typename T> inline FormatArg makeFormatArg(const T& val)
     {
-        return FormatArg{&val, [](String& out, const void* ptr) { formatArg(out, *static_cast<const T*>(ptr)); }};
+        return FormatArg{&val, [](String& out, const void* ptr, const FormatSpec& spec) { formatArgWithSpec(out, *static_cast<const T*>(ptr), spec); }};
     }
 
     /*
@@ -326,6 +378,16 @@ namespace seal
         {
             ++pos;
             spec.precision = fmtParseDigits(s, len, pos);
+        }
+
+        if (pos < len)
+        {
+            char c = s[pos];
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+            {
+                spec.type = c;
+                ++pos;
+            }
         }
 
         return spec;
@@ -520,7 +582,7 @@ namespace seal
                 if (argIdx < argCount)
                 {
                     String temp(out.allocator());
-                    args[argIdx].write(temp, args[argIdx].data);
+                    args[argIdx].write(temp, args[argIdx].data, spec);
                     fmtApplyPrecision(temp, spec.precision);
                     fmtApplyPadding(out, StringView(temp), spec);
                 }
