@@ -1,26 +1,32 @@
 #include "memory.h"
 
-using namespace seal;
+
 
 /*
     os helpers
 */
-#if defined(_WIN32)
+#if defined(_KERNEL_MODE)
+    #include <ntddk.h>
+#elif defined(_WIN32)
 extern "C"
 {
-    __declspec(dllimport) void* __stdcall VirtualAlloc(void* lpAddress, ssize dwSize, unsigned long flAllocationType,
+    __declspec(dllimport) void* __stdcall VirtualAlloc(void* lpAddress, seal::ssize dwSize, unsigned long flAllocationType,
                                                        unsigned long flProtect);
-    __declspec(dllimport) int __stdcall VirtualFree(void* lpAddress, ssize dwSize, unsigned long dwFreeType);
+    __declspec(dllimport) int __stdcall VirtualFree(void* lpAddress, seal::ssize dwSize, unsigned long dwFreeType);
 }
 #elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
     #include <sys/mman.h>
 #endif
 
+using namespace seal;
+
 namespace
 {
     void* allocatePages(ssize bytes)
     {
-#if defined(_WIN32)
+#if defined(_KERNEL_MODE)
+        return ExAllocatePool2(POOL_FLAG_NON_PAGED, bytes, 'lseS');
+#elif defined(_WIN32)
         // MEM_COMMIT | MEM_RESERVE = 0x1000 | 0x2000, PAGE_READWRITE = 0x04
         return VirtualAlloc(nullptr, bytes, 0x3000, 0x04);
 #elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
@@ -35,7 +41,10 @@ namespace
     void freePages(void* ptr, ssize bytes)
     {
         if (!ptr) return;
-#if defined(_WIN32)
+#if defined(_KERNEL_MODE)
+        (void)bytes;
+        ExFreePoolWithTag(ptr, 'lseS');
+#elif defined(_WIN32)
         (void)bytes;
         // MEM_RELEASE = 0x8000
         VirtualFree(ptr, 0, 0x8000);
