@@ -47,6 +47,11 @@ namespace seal
             bool is_sso() const noexcept { return !is_heap_; }
             IAllocator* allocator() const noexcept { return alloc_; }
 
+            char* begin() noexcept { return data_mut(); }
+            char* end() noexcept { return data_mut() + len_; }
+            const char* begin() const noexcept { return c_str(); }
+            const char* end() const noexcept { return c_str() + len_; }
+
             usize find(const char* needle, usize start = 0) const noexcept;
             String substr(usize pos, usize len = npos) const noexcept;
             int compare(const String& other) const noexcept;
@@ -92,6 +97,9 @@ namespace seal
             [[nodiscard]] constexpr const char* data() const noexcept { return _data; }
             [[nodiscard]] constexpr usize size() const noexcept { return _size; }
             [[nodiscard]] constexpr bool empty() const noexcept { return _size == 0; }
+
+            [[nodiscard]] constexpr const char* begin() const noexcept { return _data; }
+            [[nodiscard]] constexpr const char* end() const noexcept { return _data + _size; }
 
             [[nodiscard]] usize find(StringView needle, usize start = 0) const noexcept;
             [[nodiscard]] StringView substr(usize pos, usize count = npos) const noexcept;
