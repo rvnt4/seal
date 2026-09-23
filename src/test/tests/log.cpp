@@ -63,7 +63,7 @@ class LoggerTest : public ITest
             void* mockSinkMem = heapAllocator.allocate(sizeof(MockSink), alignof(MockSink));
             MockSink* mockSink = new (mockSinkMem) MockSink();
             seal::SharedPtr<seal::ILogSink> sink(mockSink, &heapAllocator);
-            logger.addSink(sink);
+            (void)logger.addSink(sink);
 
             logger.info("Example log {}", 1337);
 
