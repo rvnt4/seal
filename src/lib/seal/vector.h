@@ -72,10 +72,17 @@ namespace seal
                 if (!ensure_capacity()) return false;
                 if (idx < _len)
                 {
-                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
-                    for (usize i = _len - 1; i > idx; --i)
+                    if constexpr (__is_trivially_copyable(T))
                     {
-                        _data[i] = static_cast<T&&>(_data[i - 1]);
+                        seal::memmove(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
+                    }
+                    else
+                    {
+                        ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
+                        for (usize i = _len - 1; i > idx; --i)
+                        {
+                            _data[i] = static_cast<T&&>(_data[i - 1]);
+                        }
                     }
                     _data[idx] = item;
                 }
@@ -93,10 +100,17 @@ namespace seal
                 if (!ensure_capacity()) return false;
                 if (idx < _len)
                 {
-                    ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
-                    for (usize i = _len - 1; i > idx; --i)
+                    if constexpr (__is_trivially_copyable(T))
                     {
-                        _data[i] = static_cast<T&&>(_data[i - 1]);
+                        seal::memmove(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
+                    }
+                    else
+                    {
+                        ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
+                        for (usize i = _len - 1; i > idx; --i)
+                        {
+                            _data[i] = static_cast<T&&>(_data[i - 1]);
+                        }
                     }
                     _data[idx] = static_cast<T&&>(item);
                 }
@@ -118,10 +132,17 @@ namespace seal
                     _alloc->allocate(static_cast<ssize>(sizeof(T) * new_cap), static_cast<ssize>(alignof(T))));
                 if (!new_data) return false;
 
-                for (usize i = 0; i < _len; ++i)
+                if constexpr (__is_trivially_copyable(T))
                 {
-                    ::new (static_cast<void*>(&new_data[i]), seal::placement_t{}) T(static_cast<T&&>(_data[i]));
-                    _data[i].~T();
+                    if (_len > 0) seal::memcpy(new_data, _data, _len * sizeof(T));
+                }
+                else
+                {
+                    for (usize i = 0; i < _len; ++i)
+                    {
+                        ::new (static_cast<void*>(&new_data[i]), seal::placement_t{}) T(static_cast<T&&>(_data[i]));
+                        _data[i].~T();
+                    }
                 }
 
                 if (_data) _alloc->deallocate(_data);
@@ -132,8 +153,11 @@ namespace seal
 
             void clear() noexcept
             {
-                for (usize i = 0; i < _len; ++i)
-                    _data[i].~T();
+                if constexpr (!__is_trivially_copyable(T))
+                {
+                    for (usize i = 0; i < _len; ++i)
+                        _data[i].~T();
+                }
                 _len = 0;
             }
 
@@ -147,18 +171,32 @@ namespace seal
                 if (_len > 0)
                 {
                     _len--;
-                    _data[_len].~T();
+                    if constexpr (!__is_trivially_copyable(T))
+                    {
+                        _data[_len].~T();
+                    }
                 }
             }
 
             void erase(usize idx) noexcept
             {
                 if (idx >= _len) return;
-                for (usize i = idx; i < _len - 1; ++i)
+                if constexpr (__is_trivially_copyable(T))
                 {
-                    _data[i] = static_cast<T&&>(_data[i + 1]);
+                    if (idx < _len - 1)
+                    {
+                        seal::memmove(&_data[idx], &_data[idx + 1], (_len - idx - 1) * sizeof(T));
+                    }
                 }
-                _data[--_len].~T();
+                else
+                {
+                    for (usize i = idx; i < _len - 1; ++i)
+                    {
+                        _data[i] = static_cast<T&&>(_data[i + 1]);
+                    }
+                    _data[_len - 1].~T();
+                }
+                --_len;
             }
 
             T* begin() noexcept { return _data; }
