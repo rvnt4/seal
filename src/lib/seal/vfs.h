@@ -144,14 +144,22 @@ namespace seal
     {
         switch (result)
         {
-            case VFSResult::Success: return "Success";
-            case VFSResult::FileNotFound: return "FileNotFound";
-            case VFSResult::AccessDenied: return "AccessDenied";
-            case VFSResult::ProviderError: return "ProviderError";
-            case VFSResult::InvalidPath: return "InvalidPath";
-            case VFSResult::AlreadyExists: return "AlreadyExists";
-            case VFSResult::NotADirectory: return "NotADirectory";
-            default: return "Unknown";
+            case VFSResult::Success:
+                return "Success";
+            case VFSResult::FileNotFound:
+                return "FileNotFound";
+            case VFSResult::AccessDenied:
+                return "AccessDenied";
+            case VFSResult::ProviderError:
+                return "ProviderError";
+            case VFSResult::InvalidPath:
+                return "InvalidPath";
+            case VFSResult::AlreadyExists:
+                return "AlreadyExists";
+            case VFSResult::NotADirectory:
+                return "NotADirectory";
+            default:
+                return "Unknown";
         }
     }
 } // namespace seal

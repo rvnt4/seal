@@ -142,7 +142,8 @@ namespace seal
             return;
         }
 
-        static_assert(sizeof(double) == sizeof(unsigned long long), "Double size mismatch for IEEE 754 bitcast"); // should i keep this actually idk
+        static_assert(sizeof(double) == sizeof(unsigned long long),
+                      "Double size mismatch for IEEE 754 bitcast"); // should i keep this actually idk
 
         unsigned long long bits = 0;
         seal::memcpy(&bits, &val, sizeof(bits));

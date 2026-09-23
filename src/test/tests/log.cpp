@@ -108,7 +108,8 @@ class LoggerTest : public ITest
                 return;
             }
 
-            if (mockSink->lastType != seal::LogType::ERROR || mockSink->lastMessage != seal::String("Fatal error code: 500"))
+            if (mockSink->lastType != seal::LogType::ERROR ||
+                mockSink->lastMessage != seal::String("Fatal error code: 500"))
             {
                 this->logError("last log level (ERROR) message mismatch");
                 return;

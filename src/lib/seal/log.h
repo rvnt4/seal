@@ -67,7 +67,10 @@ namespace seal
 
             [[nodiscard]] StringView getName() const { return _name; }
 
-            [[nodiscard]] bool addSink(SharedPtr<ILogSink> sink) { return _sinks.push_back(static_cast<SharedPtr<ILogSink>&&>(sink)); }
+            [[nodiscard]] bool addSink(SharedPtr<ILogSink> sink)
+            {
+                return _sinks.push_back(static_cast<SharedPtr<ILogSink>&&>(sink));
+            }
 
             [[nodiscard]] usize sinkCount() const { return _sinks.size(); }
 

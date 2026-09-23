@@ -169,10 +169,10 @@ class MemTest : public ITest
             void* a8 = alignHeap.allocate(1, 8);
             void* a128 = alignHeap.allocate(16, 128);
 
-            if (!a16 || (reinterpret_cast<seal::sealptr>(a16) % 16) != 0 ||
-                !a64 || (reinterpret_cast<seal::sealptr>(a64) % 64) != 0 ||
-                !a8 || (reinterpret_cast<seal::sealptr>(a8) % 8) != 0 ||
-                !a128 || (reinterpret_cast<seal::sealptr>(a128) % 128) != 0)
+            if (!a16 || (reinterpret_cast<seal::sealptr>(a16) % 16) != 0 || !a64 ||
+                (reinterpret_cast<seal::sealptr>(a64) % 64) != 0 || !a8 ||
+                (reinterpret_cast<seal::sealptr>(a8) % 8) != 0 || !a128 ||
+                (reinterpret_cast<seal::sealptr>(a128) % 128) != 0)
             {
                 this->logError("DynamicHeapAllocator alignment failed on first allocation");
                 return;

@@ -53,8 +53,7 @@ namespace seal
             MountPoint& prev = _mounts[i - 1];
             MountPoint& curr = _mounts[i];
             const bool prev_comes_after =
-                (prev.priority < curr.priority) ||
-                (prev.priority == curr.priority && prev.pathDepth < curr.pathDepth);
+                (prev.priority < curr.priority) || (prev.priority == curr.priority && prev.pathDepth < curr.pathDepth);
             if (!prev_comes_after) break;
 
             MountPoint tmp = static_cast<MountPoint&&>(_mounts[i - 1]);
@@ -150,8 +149,7 @@ namespace seal
             String relativePath;
             if (getRelativePath(_mounts[i], searchPath, relativePath))
             {
-                if (_mounts[i].provider->exists(relativePath))
-                    return _mounts[i].provider->deleteFile(relativePath);
+                if (_mounts[i].provider->exists(relativePath)) return _mounts[i].provider->deleteFile(relativePath);
             }
         }
         return VFSResult::FileNotFound;
@@ -246,8 +244,7 @@ namespace seal
         return result;
     }
 
-    const VirtualFileSystem::MountPoint* VirtualFileSystem::findBestMount(StringView path,
-                                                                          String& relativePath) const
+    const VirtualFileSystem::MountPoint* VirtualFileSystem::findBestMount(StringView path, String& relativePath) const
     {
         String searchPath = trimPathSeparators(normalizePath(path), _allocator);
 
@@ -310,8 +307,7 @@ namespace seal
         return true;
     }
 
-    bool VirtualFileSystem::getRelativePath(const MountPoint& mount, StringView searchPath,
-                                            String& outRelative) const
+    bool VirtualFileSystem::getRelativePath(const MountPoint& mount, StringView searchPath, String& outRelative) const
     {
         return matchesMount(mount, searchPath, outRelative);
     }

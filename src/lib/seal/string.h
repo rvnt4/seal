@@ -81,49 +81,50 @@ namespace seal
     */
     class StringView
     {
-    public:
-        static constexpr usize npos = static_cast<usize>(-1);
+        public:
+            static constexpr usize npos = static_cast<usize>(-1);
 
-        constexpr StringView() noexcept = default;
-        constexpr StringView(const char* s) noexcept : _data(s), _size(strLen(s)) {}
-        constexpr StringView(const char* s, usize len) noexcept : _data(s), _size(len) {}
-        StringView(const String& s) noexcept : _data(s.c_str()), _size(s.size()) {}
+            constexpr StringView() noexcept = default;
+            constexpr StringView(const char* s) noexcept : _data(s), _size(strLen(s)) {}
+            constexpr StringView(const char* s, usize len) noexcept : _data(s), _size(len) {}
+            StringView(const String& s) noexcept : _data(s.c_str()), _size(s.size()) {}
 
-        [[nodiscard]] constexpr const char* data() const noexcept { return _data; }
-        [[nodiscard]] constexpr usize size() const noexcept { return _size; }
-        [[nodiscard]] constexpr bool empty() const noexcept { return _size == 0; }
+            [[nodiscard]] constexpr const char* data() const noexcept { return _data; }
+            [[nodiscard]] constexpr usize size() const noexcept { return _size; }
+            [[nodiscard]] constexpr bool empty() const noexcept { return _size == 0; }
 
-        [[nodiscard]] usize find(StringView needle, usize start = 0) const noexcept;
-        [[nodiscard]] StringView substr(usize pos, usize count = npos) const noexcept;
+            [[nodiscard]] usize find(StringView needle, usize start = 0) const noexcept;
+            [[nodiscard]] StringView substr(usize pos, usize count = npos) const noexcept;
 
-        [[nodiscard]] constexpr bool starts_with(StringView prefix) const noexcept
-        {
-            if (prefix._size > _size) return false;
-            for (usize i = 0; i < prefix._size; ++i)
-                if (_data[i] != prefix._data[i]) return false;
-            return true;
-        }
+            [[nodiscard]] constexpr bool starts_with(StringView prefix) const noexcept
+            {
+                if (prefix._size > _size) return false;
+                for (usize i = 0; i < prefix._size; ++i)
+                    if (_data[i] != prefix._data[i]) return false;
+                return true;
+            }
 
-        [[nodiscard]] constexpr bool ends_with(StringView suffix) const noexcept
-        {
-            if (suffix._size > _size) return false;
-            const usize offset = _size - suffix._size;
-            for (usize i = 0; i < suffix._size; ++i)
-                if (_data[offset + i] != suffix._data[i]) return false;
-            return true;
-        }
+            [[nodiscard]] constexpr bool ends_with(StringView suffix) const noexcept
+            {
+                if (suffix._size > _size) return false;
+                const usize offset = _size - suffix._size;
+                for (usize i = 0; i < suffix._size; ++i)
+                    if (_data[offset + i] != suffix._data[i]) return false;
+                return true;
+            }
 
-    private:
-        static constexpr usize strLen(const char* s) noexcept
-        {
-            if (!s) return 0;
-            usize len = 0;
-            while (s[len]) ++len;
-            return len;
-        }
+        private:
+            static constexpr usize strLen(const char* s) noexcept
+            {
+                if (!s) return 0;
+                usize len = 0;
+                while (s[len])
+                    ++len;
+                return len;
+            }
 
-        const char* _data = nullptr;
-        usize _size = 0;
+            const char* _data = nullptr;
+            usize _size = 0;
     };
 
     inline constexpr bool operator==(StringView a, StringView b) noexcept

@@ -12,7 +12,10 @@ class MockProvider : public seal::IFileProvider
         seal::Vector<seal::String> files;
         seal::String lastWritten;
 
-        MockProvider(seal::StringView name, seal::IAllocator* a) : alloc(a), providerName(name.data(), name.size()), files(a) {}
+        MockProvider(seal::StringView name, seal::IAllocator* a)
+            : alloc(a), providerName(name.data(), name.size()), files(a)
+        {
+        }
 
         bool exists(seal::StringView path) const override
         {
@@ -48,10 +51,7 @@ class MockProvider : public seal::IFileProvider
             return seal::VFSResult::FileNotFound;
         }
 
-        seal::VFSResult createDirectory(seal::StringView /*path*/) override
-        {
-            return seal::VFSResult::Success;
-        }
+        seal::VFSResult createDirectory(seal::StringView /*path*/) override { return seal::VFSResult::Success; }
 
         seal::Vector<seal::String> listDirectory(seal::StringView /*path*/, seal::IAllocator* a) const override
         {
@@ -94,18 +94,22 @@ class VFSTest : public ITest
                 write / read tests
             */
             logInfo("Writing to different mount points");
-            vfs.writeFile(seal::StringView("scripts/main.lua"), seal::FileBuffer::fromString(seal::StringView("print('hello')"), &heapAllocator));
-            vfs.writeFile(seal::StringView("config/network/settings.json"), seal::FileBuffer::fromString(seal::StringView("{ \"ip\": \"127.0.0.1\" }"), &heapAllocator));
+            vfs.writeFile(seal::StringView("scripts/main.lua"),
+                          seal::FileBuffer::fromString(seal::StringView("print('hello')"), &heapAllocator));
+            vfs.writeFile(seal::StringView("config/network/settings.json"),
+                          seal::FileBuffer::fromString(seal::StringView("{ \"ip\": \"127.0.0.1\" }"), &heapAllocator));
 
             logInfo("Reading from mount points");
             seal::FileBuffer b1, b2;
-            if (vfs.readFile(seal::StringView("scripts/main.lua"), b1) == seal::VFSResult::Success) logInfo("Read Scripts: {}", "dummy_data");
+            if (vfs.readFile(seal::StringView("scripts/main.lua"), b1) == seal::VFSResult::Success)
+                logInfo("Read Scripts: {}", "dummy_data");
 
             /*
                 existence and crosstalk
             */
             if (!vfs.exists(seal::StringView("scripts/main.lua"))) logError("scripts/main.lua is missing?");
-            if (vfs.exists(seal::StringView("scripts/settings.json"))) logError("wrong provider, settings.json should be inaccessible");
+            if (vfs.exists(seal::StringView("scripts/settings.json")))
+                logError("wrong provider, settings.json should be inaccessible");
             logInfo("Path isolation verified");
 
             /*
@@ -114,8 +118,9 @@ class VFSTest : public ITest
             void* mem3 = heapAllocator.allocate(sizeof(MockProvider), alignof(MockProvider));
             MockProvider* overrideProv = new (mem3, seal::placement_t{}) MockProvider("MemoryProvider", &heapAllocator);
             seal::SharedPtr<seal::IFileProvider> p3(overrideProv, &heapAllocator);
-            
-            p3->writeFile(seal::StringView("patch.txt"), seal::FileBuffer::fromString(seal::StringView("Hotfix Data"), &heapAllocator));
+
+            p3->writeFile(seal::StringView("patch.txt"),
+                          seal::FileBuffer::fromString(seal::StringView("Hotfix Data"), &heapAllocator));
 
             vfs.mount(seal::StringView("scripts"), p3, 10); // higher priority
 
@@ -137,7 +142,8 @@ class VFSTest : public ITest
             */
             seal::VFSResult delRes = vfs.deleteFile(seal::StringView("scripts/main.lua"));
             logInfo("Deletion result: {}", seal::vfsResultToString(delRes).data());
-            if (vfs.exists(seal::StringView("scripts/main.lua"))) logError("Failed to delete file, scrips/main.lua still accessible");
+            if (vfs.exists(seal::StringView("scripts/main.lua")))
+                logError("Failed to delete file, scrips/main.lua still accessible");
 
             /*
                 empty file support

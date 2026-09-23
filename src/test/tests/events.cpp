@@ -8,26 +8,26 @@ namespace
 {
     struct StringSinkCtx
     {
-        seal::Vector<seal::String>* out;
+            seal::Vector<seal::String>* out;
 
-        static void record(void* ctx, seal::String value)
-        {
-            static_cast<StringSinkCtx*>(ctx)->out->push_back(static_cast<seal::String&&>(value));
-        }
+            static void record(void* ctx, seal::String value)
+            {
+                static_cast<StringSinkCtx*>(ctx)->out->push_back(static_cast<seal::String&&>(value));
+            }
     };
 
     struct SelfRemoveCtx
     {
-        seal::Event<int>* ev;
-        seal::Event<int>::ConnectionId id;
-        int calls;
+            seal::Event<int>* ev;
+            seal::Event<int>::ConnectionId id;
+            int calls;
 
-        static void cb(void* ctx, int)
-        {
-            SelfRemoveCtx* self = static_cast<SelfRemoveCtx*>(ctx);
-            self->calls++;
-            self->ev->removeListener(self->id);
-        }
+            static void cb(void* ctx, int)
+            {
+                SelfRemoveCtx* self = static_cast<SelfRemoveCtx*>(ctx);
+                self->calls++;
+                self->ev->removeListener(self->id);
+            }
     };
 } // namespace
 
@@ -46,15 +46,15 @@ class EventTest : public ITest
 
         struct Context
         {
-            int calls = 0;
-            int lastVal = 0;
+                int calls = 0;
+                int lastVal = 0;
 
-            static void method(void* ctx, int val)
-            {
-                Context* self = static_cast<Context*>(ctx);
-                self->calls++;
-                self->lastVal = val;
-            }
+                static void method(void* ctx, int val)
+                {
+                    Context* self = static_cast<Context*>(ctx);
+                    self->calls++;
+                    self->lastVal = val;
+                }
         };
 
         virtual void run() override

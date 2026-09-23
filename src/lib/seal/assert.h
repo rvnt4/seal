@@ -17,7 +17,7 @@
 #if defined(_MSC_VER)
     #define SEAL_ASSUME(cond) __assume(cond)
 #elif defined(__GNUC__) || defined(__clang__)
-    #define SEAL_ASSUME(cond)                                                                                       \
+    #define SEAL_ASSUME(cond)                                                                                          \
         do                                                                                                             \
         {                                                                                                              \
             if (!(cond)) __builtin_unreachable();                                                                      \
@@ -30,17 +30,17 @@ namespace seal
 {
     void displayError(const char* msg, const char* file, int line);
     [[noreturn]] void fatalExit();
-} // namespace seallib
+} // namespace seal
 
 /*
     Shared fatal path for ASSERT and PANIC.
 */
-#define SEAL_FATAL(msg)                                                                                             \
+#define SEAL_FATAL(msg)                                                                                                \
     do                                                                                                                 \
     {                                                                                                                  \
-        seal::displayError((msg), __FILE__, __LINE__);                                                              \
-        SEAL_DEBUGBREAK();                                                                                          \
-        seal::fatalExit();                                                                                          \
+        seal::displayError((msg), __FILE__, __LINE__);                                                                 \
+        SEAL_DEBUGBREAK();                                                                                             \
+        seal::fatalExit();                                                                                             \
     } while (0)
 
 #if !defined(NDEBUG)
@@ -49,9 +49,9 @@ namespace seal
         {                                                                                                              \
             if (!(cond))                                                                                               \
             {                                                                                                          \
-                SEAL_FATAL(msg);                                                                                    \
+                SEAL_FATAL(msg);                                                                                       \
             }                                                                                                          \
-            SEAL_ASSUME(cond);                                                                                      \
+            SEAL_ASSUME(cond);                                                                                         \
         } while (0)
 #else
     #define ASSERT(cond, msg) SEAL_ASSUME(cond)
