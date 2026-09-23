@@ -271,6 +271,41 @@ namespace seal
     {
         return a.compare(b) < 0;
     }
+
+    String operator+(const String& a, const String& b) noexcept
+    {
+        String res(a.allocator());
+        if (res.reserve(a.size() + b.size()))
+        {
+            (void)res.append(a);
+            (void)res.append(b);
+        }
+        return res;
+    }
+
+    String operator+(const String& a, const char* b) noexcept
+    {
+        String res(a.allocator());
+        usize blen = seal::strlen(b);
+        if (res.reserve(a.size() + blen))
+        {
+            (void)res.append(a);
+            (void)res.append(b, blen);
+        }
+        return res;
+    }
+
+    String operator+(const char* a, const String& b) noexcept
+    {
+        String res(b.allocator());
+        usize alen = seal::strlen(a);
+        if (res.reserve(alen + b.size()))
+        {
+            (void)res.append(a, alen);
+            (void)res.append(b);
+        }
+        return res;
+    }
 } // namespace seal
 
 /*

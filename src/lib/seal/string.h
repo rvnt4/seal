@@ -199,4 +199,8 @@ namespace seal
     {
         return !(a == b);
     }
+
+    String operator+(const String& a, const String& b) noexcept;
+    String operator+(const String& a, const char* b) noexcept;
+    String operator+(const char* a, const String& b) noexcept;
 } // namespace seal
