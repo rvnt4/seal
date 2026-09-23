@@ -124,35 +124,37 @@ namespace seal
 
     inline void formatArg(String& out, double val)
     {
-        constexpr double abs_max = 1.7976931348623157e308;
+        constexpr double absMax = 1.7976931348623157e308;
 
         if (val != val)
         {
             (void)out.append("nan", 3);
             return;
         }
-        if (val > abs_max)
+        if (val > absMax)
         {
             (void)out.append("inf", 3);
             return;
         }
-        if (val < -abs_max)
+        if (val < -absMax)
         {
             (void)out.append("-inf", 4);
             return;
         }
 
+        static_assert(sizeof(double) == sizeof(unsigned long long), "Double size mismatch for IEEE 754 bitcast"); // should i keep this actually idk
+
         unsigned long long bits = 0;
         seal::memcpy(&bits, &val, sizeof(bits));
-        const bool is_neg = (bits >> 63) != 0;
-        if (is_neg)
+        const bool isNeg = (bits >> 63) != 0;
+        if (isNeg)
         {
             (void)out.push_back('-');
             val = -val;
         }
 
-        constexpr double exact_limit = 9007199254740992.0;
-        if (val < exact_limit)
+        constexpr double exactLimit = 9007199254740992.0;
+        if (val < exactLimit)
         {
             unsigned long long ip = static_cast<unsigned long long>(val);
             unsigned long long fr = static_cast<unsigned long long>((val - static_cast<double>(ip)) * 1000000.0 + 0.5);
@@ -239,32 +241,316 @@ namespace seal
         formatArg(out, static_cast<const void*>(nullptr));
     }
 
-    inline void formatImpl(String& out, StringView fmt)
+    /*
+        format specification
+    */
+    struct FormatSpec
     {
-        (void)out.append(fmt.data(), fmt.size());
+            char fill = ' ';
+            char align = '\0'; // '<' left, '>' right, '^' center, '\0' default
+            int width = 0;
+            int precision = -1; // -1 = not specified
+    };
+
+    /*
+        type erased argument wrapper for positional access
+    */
+    struct FormatArg
+    {
+            const void* data;
+            void (*write)(String&, const void*);
+    };
+
+    template <typename T> inline FormatArg makeFormatArg(const T& val)
+    {
+        return FormatArg{&val, [](String& out, const void* ptr) { formatArg(out, *static_cast<const T*>(ptr)); }};
     }
 
-    template <typename T, typename... Args>
-    inline void formatImpl(String& out, StringView fmt, const T& first, const Args&... rest)
+    /*
+        format spec parsing helpers
+    */
+    inline bool fmtIsAlign(char c)
     {
-        usize pos = fmt.find("{}");
+        return c == '<' || c == '>' || c == '^';
+    }
 
-        if (pos == StringView::npos)
+    inline int fmtParseDigits(const char* s, usize len, usize& pos)
+    {
+        int val = 0;
+        while (pos < len && s[pos] >= '0' && s[pos] <= '9')
         {
-            (void)out.append(fmt.data(), fmt.size());
+            val = val * 10 + (s[pos] - '0');
+            ++pos;
+        }
+        return val;
+    }
+
+    /*
+        parse a format spec string (the part after ':' inside a replacement field)
+
+        grammar:
+            [[fill]align][0][width][.precision]
+            fill        = any char except '{' or '}'
+            align       = '<' | '>' | '^'
+            width       = digit+
+            precision   = digit+
+    */
+    inline FormatSpec fmtParseSpec(const char* s, usize len)
+    {
+        FormatSpec spec;
+        usize pos = 0;
+
+        if (len >= 2 && fmtIsAlign(s[1]))
+        {
+            spec.fill = s[0];
+            spec.align = s[1];
+            pos = 2;
+        }
+        else if (len >= 1 && fmtIsAlign(s[0]))
+        {
+            spec.align = s[0];
+            pos = 1;
+        }
+
+        if (pos < len && s[pos] == '0' && spec.align == '\0' && spec.fill == ' ')
+        {
+            spec.fill = '0';
+            spec.align = '>';
+            ++pos;
+        }
+
+        if (pos < len && s[pos] >= '0' && s[pos] <= '9') spec.width = fmtParseDigits(s, len, pos);
+
+        if (pos < len && s[pos] == '.')
+        {
+            ++pos;
+            spec.precision = fmtParseDigits(s, len, pos);
+        }
+
+        return spec;
+    }
+
+    inline void fmtApplyPrecision(String& temp, int precision)
+    {
+        if (precision < 0) return;
+
+        usize dotPos = StringView::npos;
+        bool isNumber = true;
+
+        for (usize i = 0; i < temp.size(); ++i)
+        {
+            if (temp[i] == '.')
+                dotPos = i;
+            else if (temp[i] < '0' || temp[i] > '9')
+            {
+                if (i == 0 && temp[i] == '-') continue;
+                isNumber = false;
+            }
+        }
+
+        if (dotPos != StringView::npos)
+        {
+            const usize fracStart = dotPos + 1;
+            const usize fracLen = temp.size() - fracStart;
+            usize keepEnd = (precision == 0) ? dotPos : dotPos + 1 + static_cast<usize>(precision);
+
+            if (fracLen > static_cast<usize>(precision))
+            {
+                bool carry = false;
+                if (keepEnd < temp.size() && temp[keepEnd] >= '5')
+                {
+                    carry = true;
+                    for (int i = static_cast<int>(keepEnd) - 1; i >= 0 && carry; --i)
+                    {
+                        if (temp[i] == '.') continue;
+                        if (temp[i] == '-') break;
+
+                        if (temp[i] == '9')
+                        {
+                            temp[i] = '0';
+                        }
+                        else
+                        {
+                            temp[i]++;
+                            carry = false;
+                        }
+                    }
+                }
+
+                (void)temp.resize(keepEnd);
+
+                if (carry)
+                {
+                    (void)temp.push_back('0');
+                    usize shiftStart = (temp[0] == '-') ? 1 : 0;
+                    for (usize j = temp.size() - 1; j > shiftStart; --j)
+                        temp[j] = temp[j - 1];
+                    temp[shiftStart] = '1';
+                }
+            }
+            else
+            {
+                const usize needed = static_cast<usize>(precision) - fracLen;
+                for (usize i = 0; i < needed; ++i)
+                    (void)temp.push_back('0');
+            }
+        }
+        else if (!isNumber)
+        {
+            // Truncate strings, but skip integers!
+            if (temp.size() > static_cast<usize>(precision)) (void)temp.resize(static_cast<usize>(precision));
+        }
+    }
+
+    /*
+        apply width / fill / alignment padding
+    */
+    inline void fmtApplyPadding(String& out, StringView content, const FormatSpec& spec)
+    {
+        if (spec.width <= 0 || content.size() >= static_cast<usize>(spec.width))
+        {
+            (void)out.append(content.data(), content.size());
             return;
         }
 
-        (void)out.append(fmt.data(), pos);
+        usize padTotal = static_cast<usize>(spec.width) - content.size();
+        const char align = (spec.align != '\0') ? spec.align : '<';
 
-        formatArg(out, first);
-        formatImpl(out, fmt.substr(pos + 2), rest...);
+        bool is_neg_zero_pad = (content.size() > 0 && content.data()[0] == '-' && spec.fill == '0' && align == '>');
+        if (is_neg_zero_pad)
+        {
+            (void)out.push_back('-');
+            content = StringView(content.data() + 1, content.size() - 1);
+        }
+
+        if (align == '>')
+        {
+            for (usize i = 0; i < padTotal; ++i)
+                (void)out.push_back(spec.fill);
+            (void)out.append(content.data(), content.size());
+        }
+        else if (align == '<')
+        {
+            (void)out.append(content.data(), content.size());
+            for (usize i = 0; i < padTotal; ++i)
+                (void)out.push_back(spec.fill);
+        }
+        else
+        {
+            const usize padLeft = padTotal / 2;
+            const usize padRight = padTotal - padLeft;
+            for (usize i = 0; i < padLeft; ++i)
+                (void)out.push_back(spec.fill);
+            (void)out.append(content.data(), content.size());
+            for (usize i = 0; i < padRight; ++i)
+                (void)out.push_back(spec.fill);
+        }
+    }
+
+    inline void formatCore(String& out, StringView fmt, const FormatArg* args, usize argCount)
+    {
+        const char* s = fmt.data();
+        const usize len = fmt.size();
+        usize i = 0;
+        usize autoIdx = 0;
+
+        while (i < len)
+        {
+            // escaped braces
+            if (s[i] == '{' && i + 1 < len && s[i + 1] == '{')
+            {
+                (void)out.push_back('{');
+                i += 2;
+                continue;
+            }
+            if (s[i] == '}' && i + 1 < len && s[i + 1] == '}')
+            {
+                (void)out.push_back('}');
+                i += 2;
+                continue;
+            }
+
+            // replacement field
+            if (s[i] == '{')
+            {
+                ++i;
+
+                usize end = i;
+                while (end < len && s[end] != '}')
+                    ++end;
+
+                if (end >= len)
+                {
+                    (void)out.push_back('{');
+                    continue;
+                }
+
+                const char* fieldStart = s + i;
+                const usize fieldLen = end - i;
+
+                usize fpos = 0;
+                usize argIdx = autoIdx;
+                bool hasExplicitIndex = false;
+
+                if (fpos < fieldLen && fieldStart[fpos] >= '0' && fieldStart[fpos] <= '9')
+                {
+                    usize saved = fpos;
+                    int parsed = fmtParseDigits(fieldStart, fieldLen, fpos);
+                    if (fpos == fieldLen || fieldStart[fpos] == ':')
+                    {
+                        argIdx = static_cast<usize>(parsed);
+                        hasExplicitIndex = true;
+                    }
+                    else
+                    {
+                        fpos = saved;
+                    }
+                }
+
+                if (!hasExplicitIndex) ++autoIdx;
+
+                FormatSpec spec;
+                if (fpos < fieldLen && fieldStart[fpos] == ':')
+                {
+                    ++fpos;
+                    spec = fmtParseSpec(fieldStart + fpos, fieldLen - fpos);
+                }
+
+                if (argIdx < argCount)
+                {
+                    String temp(out.allocator());
+                    args[argIdx].write(temp, args[argIdx].data);
+                    fmtApplyPrecision(temp, spec.precision);
+                    fmtApplyPadding(out, StringView(temp), spec);
+                }
+                else
+                {
+                    (void)out.push_back('{');
+                    (void)out.append(fieldStart, fieldLen);
+                    (void)out.push_back('}');
+                }
+
+                i = end + 1;
+                continue;
+            }
+
+            (void)out.push_back(s[i]);
+            ++i;
+        }
     }
 
     template <typename... Args> inline String format(IAllocator* alloc, StringView fmt, const Args&... args)
     {
         String out(alloc);
-        formatImpl(out, fmt, args...);
+        if constexpr (sizeof...(Args) == 0)
+        {
+            formatCore(out, fmt, nullptr, 0);
+        }
+        else
+        {
+            FormatArg argArray[] = {makeFormatArg(args)...};
+            formatCore(out, fmt, argArray, sizeof...(Args));
+        }
         return out;
     }
 
