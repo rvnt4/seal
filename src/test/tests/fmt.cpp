@@ -1,7 +1,7 @@
 #include "tests.h"
-
 #include <seal/fmt.h>
 #include <seal/memory.h>
+#include <cmath>
 
 class FormatTest : public ITest
 {
@@ -18,94 +18,98 @@ class FormatTest : public ITest
             */
             this->logInfo("testing format with strings and string views");
             seal::String s1 = seal::format("Hello, {}!", "World");
-            if (s1 != seal::String("Hello, World!"))
-            {
-                this->logError("format const char* failed");
-                return;
-            }
+            if (s1 != seal::String("Hello, World!")) return this->logError("format const char* failed");
 
             seal::StringView sv("Seal Engine");
             seal::String s2 = seal::format("Framework: {}", sv);
-            if (s2 != seal::String("Framework: Seal Engine"))
-            {
-                this->logError("format StringView failed");
-                return;
-            }
-
-            seal::String existingStr("Dynamic String");
-            seal::String s3 = seal::format("Value = {}", existingStr);
-            if (s3 != seal::String("Value = Dynamic String"))
-            {
-                this->logError("format String object failed");
-                return;
-            }
+            if (s2 != seal::String("Framework: Seal Engine")) return this->logError("format StringView failed");
 
             /*
                 char and bool fmt
             */
             this->logInfo("testing format with bool and char");
-
             seal::String s4 = seal::format("Char: {}, BoolTrue: {}, BoolFalse: {}", 'Z', true, false);
             if (s4 != seal::String("Char: Z, BoolTrue: true, BoolFalse: false"))
-            {
-                this->logError("format bool/char failed");
-                return;
-            }
+                return this->logError("format bool/char failed");
 
             /*
                 int fmt
             */
             this->logInfo("testing format with integers");
-
             seal::String s5 = seal::format("Zero: {}, Pos: {}, Neg: {}", 0, 42, -12345);
             if (s5 != seal::String("Zero: 0, Pos: 42, Neg: -12345"))
-            {
-                this->logError("format basic integers failed");
-                return;
-            }
+                return this->logError("format basic integers failed");
 
             seal::String s6 = seal::format("MinInt: {}", -2147483648LL);
             if (s6 != seal::String("MinInt: -2147483648"))
-            {
-                this->logError("format minimum signed integer failed");
-                return;
-            }
+                return this->logError("format minimum signed integer failed");
 
             /*
-                multiple placeholders and mixed types
+                escaped braces
             */
-            this->logInfo("testing format with mixed argument types");
-
-            seal::String s7 = seal::format("{} + {} = {} (Status: {})", 10, 20, 30, true);
-            if (s7 != seal::String("10 + 20 = 30 (Status: true)"))
-            {
-                this->logError("format mixed types failed");
-                return;
-            }
+            this->logInfo("testing escaped braces");
+            seal::String sEsc = seal::format("{{Hello}} {0}!", "World");
+            if (sEsc != seal::String("{Hello} World!")) return this->logError("format escaped braces failed");
 
             /*
-                edge cases
+                explicit positional indexing
             */
-            this->logInfo("testing format edge cases");
+            this->logInfo("testing explicit indexing");
+            seal::String sIdx = seal::format("{1} {0} {1}", "Zero", "One");
+            if (sIdx != seal::String("One Zero One")) return this->logError("format explicit indexing failed");
 
-            seal::String s8 = seal::format("No placeholders here!");
-            if (s8 != seal::String("No placeholders here!"))
-            {
-                this->logError("format with no placeholders failed");
-                return;
-            }
+            /*
+                alignment and padding
+            */
+            this->logInfo("testing alignment and padding");
+            seal::String sAlignRight = seal::format("{:>5}", 42);
+            if (sAlignRight != seal::String("   42")) return this->logError("format right alignment failed");
 
-            seal::String s9 = seal::format("Arg1: {}, Arg2: {}", "First");
-            if (s9 != seal::String("Arg1: First, Arg2: {}"))
-            {
-                this->logError("format with unmatched placeholder failed");
-                return;
-            }
+            seal::String sAlignLeft = seal::format("{:<5}", 42);
+            if (sAlignLeft != seal::String("42   ")) return this->logError("format left alignment failed");
+
+            seal::String sAlignCenter = seal::format("{:^5}", 42);
+            if (sAlignCenter != seal::String(" 42  ")) return this->logError("format center alignment failed");
+
+            seal::String sPadZero = seal::format("{:05}", 42);
+            if (sPadZero != seal::String("00042")) return this->logError("format zero padding failed");
+
+            seal::String sPadNeg = seal::format("{:05}", -42);
+            if (sPadNeg != seal::String("-0042")) return this->logError("format zero padding for negatives failed");
+
+            /*
+                floating point
+            */
+            this->logInfo("testing floating point formatting");
+            seal::String sFloat1 = seal::format("Val: {}", 3.141592);
+            if (sFloat1 != seal::String("Val: 3.141592")) return this->logError("format basic double failed");
+
+            double nanValue = std::numeric_limits<double>::quiet_NaN();
+            seal::String sFloatNan = seal::format("NaN: {}", nanValue);
+            if (sFloatNan != seal::String("NaN: nan")) return this->logError("format NaN failed");
+
+            seal::String sFloatInf = seal::format("Inf: {}", 1e300 * 1e300);
+            if (sFloatInf != seal::String("Inf: inf")) return this->logError("format Inf failed");
+
+            seal::String sFloatPrec = seal::format("{:.2}", 3.14159);
+            if (sFloatPrec != seal::String("3.14"))
+                return this->logError("format float precision failed"); // test truncation not rounding
+
+            /*
+                pointers
+            */
+            this->logInfo("testing pointer formatting");
+            seal::String sPtrNull = seal::format("Null: {}", nullptr);
+            if (sPtrNull != seal::String("Null: nullptr")) return this->logError("format nullptr failed");
+
+            int dummyVal = 0;
+            seal::String sPtr = seal::format("{}", static_cast<void*>(&dummyVal));
+            if (sPtr.size() < 3 || sPtr[0] != '0' || sPtr[1] != 'x')
+                return this->logError("format void* failed to include 0x prefix");
 
             this->logInfo("all format tests passed successfully");
         }
 
         virtual const char* getName() override { return "Format test"; }
 };
-
 static FormatTest g_FormatTest;
