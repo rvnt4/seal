@@ -151,4 +151,44 @@ namespace seal
         }
         return a.size() < b.size();
     }
+
+    inline constexpr bool operator==(const String& a, StringView b) noexcept
+    {
+        return StringView(a) == b;
+    }
+
+    inline constexpr bool operator==(StringView a, const String& b) noexcept
+    {
+        return a == StringView(b);
+    }
+
+    inline constexpr bool operator!=(const String& a, StringView b) noexcept
+    {
+        return !(a == b);
+    }
+
+    inline constexpr bool operator!=(StringView a, const String& b) noexcept
+    {
+        return !(a == b);
+    }
+
+    inline constexpr bool operator==(StringView a, const char* b) noexcept
+    {
+        return a == StringView(b);
+    }
+
+    inline constexpr bool operator==(const char* a, StringView b) noexcept
+    {
+        return StringView(a) == b;
+    }
+
+    inline constexpr bool operator!=(StringView a, const char* b) noexcept
+    {
+        return !(a == b);
+    }
+
+    inline constexpr bool operator!=(const char* a, StringView b) noexcept
+    {
+        return !(a == b);
+    }
 } // namespace seal
