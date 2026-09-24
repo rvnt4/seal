@@ -9,11 +9,11 @@ namespace seal
     struct FileBuffer
     {
             unsigned char* data = nullptr;
-            usize size = 0;
+            usz size = 0;
             IAllocator* allocator = nullptr;
 
             FileBuffer() = default;
-            FileBuffer(unsigned char* d, usize s, IAllocator* alloc) : data(d), size(s), allocator(alloc) {}
+            FileBuffer(unsigned char* d, usz s, IAllocator* alloc) : data(d), size(s), allocator(alloc) {}
 
             FileBuffer(const FileBuffer&) = delete;
             FileBuffer& operator=(const FileBuffer&) = delete;
@@ -114,7 +114,7 @@ namespace seal
                     String virtualPath;
                     SharedPtr<IFileProvider> provider;
                     int priority = 0;
-                    usize pathDepth = 0;
+                    usz pathDepth = 0;
 
                     MountPoint() = default;
                     MountPoint(String path, SharedPtr<IFileProvider> prov, int prio)
@@ -123,7 +123,7 @@ namespace seal
                     {
                     }
 
-                    static usize countPathDepth(StringView path);
+                    static usz countPathDepth(StringView path);
             };
 
             IAllocator* _allocator;

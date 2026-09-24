@@ -48,7 +48,7 @@ namespace seal
         }
 
         char buf[32];
-        usize i = 0;
+        usz i = 0;
         bool is_neg = false;
 
         unsigned long long uval = 0;
@@ -67,7 +67,7 @@ namespace seal
         }
         if (is_neg) buf[i++] = '-';
 
-        for (usize j = 0; j < i / 2; ++j)
+        for (usz j = 0; j < i / 2; ++j)
         {
             char tmp = buf[j];
             buf[j] = buf[i - 1 - j];
@@ -85,7 +85,7 @@ namespace seal
         }
 
         char buf[32];
-        usize i = 0;
+        usz i = 0;
 
         while (val > 0)
         {
@@ -93,7 +93,7 @@ namespace seal
             val /= 10;
         }
 
-        for (usize j = 0; j < i / 2; ++j)
+        for (usz j = 0; j < i / 2; ++j)
         {
             char tmp = buf[j];
             buf[j] = buf[i - 1 - j];
@@ -220,7 +220,7 @@ namespace seal
         (void)out.append("0x", 2);
         sealptr v = reinterpret_cast<sealptr>(val);
         char buf[2 * sizeof(sealptr)];
-        usize i = 0;
+        usz i = 0;
         do
         {
             const unsigned d = static_cast<unsigned>(v & 0xF);
@@ -270,7 +270,7 @@ namespace seal
                 return;
             }
             char buf[32];
-            usize i = 0;
+            usz i = 0;
             while (val > 0)
             {
                 const unsigned d = static_cast<unsigned>(val & 0xF);
@@ -278,7 +278,7 @@ namespace seal
                            (spec.type == 'X' ? static_cast<char>('A' + (d - 10)) : static_cast<char>('a' + (d - 10)));
                 val >>= 4;
             }
-            for (usize j = 0; j < i / 2; ++j)
+            for (usz j = 0; j < i / 2; ++j)
             {
                 char tmp = buf[j];
                 buf[j] = buf[i - 1 - j];
@@ -327,7 +327,7 @@ namespace seal
         return c == '<' || c == '>' || c == '^';
     }
 
-    inline int fmtParseDigits(const char* s, usize len, usize& pos)
+    inline int fmtParseDigits(const char* s, usz len, usz& pos)
     {
         int val = 0;
         while (pos < len && s[pos] >= '0' && s[pos] <= '9')
@@ -348,10 +348,10 @@ namespace seal
             width       = digit+
             precision   = digit+
     */
-    inline FormatSpec fmtParseSpec(const char* s, usize len)
+    inline FormatSpec fmtParseSpec(const char* s, usz len)
     {
         FormatSpec spec;
-        usize pos = 0;
+        usz pos = 0;
 
         if (len >= 2 && fmtIsAlign(s[1]))
         {
@@ -397,10 +397,10 @@ namespace seal
     {
         if (precision < 0) return;
 
-        usize dotPos = StringView::npos;
+        usz dotPos = StringView::npos;
         bool isNumber = true;
 
-        for (usize i = 0; i < temp.size(); ++i)
+        for (usz i = 0; i < temp.size(); ++i)
         {
             if (temp[i] == '.')
                 dotPos = i;
@@ -413,11 +413,11 @@ namespace seal
 
         if (dotPos != StringView::npos)
         {
-            const usize fracStart = dotPos + 1;
-            const usize fracLen = temp.size() - fracStart;
-            usize keepEnd = (precision == 0) ? dotPos : dotPos + 1 + static_cast<usize>(precision);
+            const usz fracStart = dotPos + 1;
+            const usz fracLen = temp.size() - fracStart;
+            usz keepEnd = (precision == 0) ? dotPos : dotPos + 1 + static_cast<usz>(precision);
 
-            if (fracLen > static_cast<usize>(precision))
+            if (fracLen > static_cast<usz>(precision))
             {
                 bool carry = false;
                 if (keepEnd < temp.size() && temp[keepEnd] >= '5')
@@ -445,23 +445,23 @@ namespace seal
                 if (carry)
                 {
                     (void)temp.push_back('0');
-                    usize shiftStart = (temp[0] == '-') ? 1 : 0;
-                    for (usize j = temp.size() - 1; j > shiftStart; --j)
+                    usz shiftStart = (temp[0] == '-') ? 1 : 0;
+                    for (usz j = temp.size() - 1; j > shiftStart; --j)
                         temp[j] = temp[j - 1];
                     temp[shiftStart] = '1';
                 }
             }
             else
             {
-                const usize needed = static_cast<usize>(precision) - fracLen;
-                for (usize i = 0; i < needed; ++i)
+                const usz needed = static_cast<usz>(precision) - fracLen;
+                for (usz i = 0; i < needed; ++i)
                     (void)temp.push_back('0');
             }
         }
         else if (!isNumber)
         {
             // Truncate strings, but skip integers!
-            if (temp.size() > static_cast<usize>(precision)) (void)temp.resize(static_cast<usize>(precision));
+            if (temp.size() > static_cast<usz>(precision)) (void)temp.resize(static_cast<usz>(precision));
         }
     }
 
@@ -470,13 +470,13 @@ namespace seal
     */
     inline void fmtApplyPadding(String& out, StringView content, const FormatSpec& spec)
     {
-        if (spec.width <= 0 || content.size() >= static_cast<usize>(spec.width))
+        if (spec.width <= 0 || content.size() >= static_cast<usz>(spec.width))
         {
             (void)out.append(content.data(), content.size());
             return;
         }
 
-        usize padTotal = static_cast<usize>(spec.width) - content.size();
+        usz padTotal = static_cast<usz>(spec.width) - content.size();
         const char align = (spec.align != '\0') ? spec.align : '<';
 
         bool is_neg_zero_pad = (content.size() > 0 && content.data()[0] == '-' && spec.fill == '0' && align == '>');
@@ -488,34 +488,34 @@ namespace seal
 
         if (align == '>')
         {
-            for (usize i = 0; i < padTotal; ++i)
+            for (usz i = 0; i < padTotal; ++i)
                 (void)out.push_back(spec.fill);
             (void)out.append(content.data(), content.size());
         }
         else if (align == '<')
         {
             (void)out.append(content.data(), content.size());
-            for (usize i = 0; i < padTotal; ++i)
+            for (usz i = 0; i < padTotal; ++i)
                 (void)out.push_back(spec.fill);
         }
         else
         {
-            const usize padLeft = padTotal / 2;
-            const usize padRight = padTotal - padLeft;
-            for (usize i = 0; i < padLeft; ++i)
+            const usz padLeft = padTotal / 2;
+            const usz padRight = padTotal - padLeft;
+            for (usz i = 0; i < padLeft; ++i)
                 (void)out.push_back(spec.fill);
             (void)out.append(content.data(), content.size());
-            for (usize i = 0; i < padRight; ++i)
+            for (usz i = 0; i < padRight; ++i)
                 (void)out.push_back(spec.fill);
         }
     }
 
-    inline void formatCore(String& out, StringView fmt, const FormatArg* args, usize argCount)
+    inline void formatCore(String& out, StringView fmt, const FormatArg* args, usz argCount)
     {
         const char* s = fmt.data();
-        const usize len = fmt.size();
-        usize i = 0;
-        usize autoIdx = 0;
+        const usz len = fmt.size();
+        usz i = 0;
+        usz autoIdx = 0;
 
         while (i < len)
         {
@@ -538,7 +538,7 @@ namespace seal
             {
                 ++i;
 
-                usize end = i;
+                usz end = i;
                 while (end < len && s[end] != '}')
                     ++end;
 
@@ -549,19 +549,19 @@ namespace seal
                 }
 
                 const char* fieldStart = s + i;
-                const usize fieldLen = end - i;
+                const usz fieldLen = end - i;
 
-                usize fpos = 0;
-                usize argIdx = autoIdx;
+                usz fpos = 0;
+                usz argIdx = autoIdx;
                 bool hasExplicitIndex = false;
 
                 if (fpos < fieldLen && fieldStart[fpos] >= '0' && fieldStart[fpos] <= '9')
                 {
-                    usize saved = fpos;
+                    usz saved = fpos;
                     int parsed = fmtParseDigits(fieldStart, fieldLen, fpos);
                     if (fpos == fieldLen || fieldStart[fpos] == ':')
                     {
-                        argIdx = static_cast<usize>(parsed);
+                        argIdx = static_cast<usz>(parsed);
                         hasExplicitIndex = true;
                     }
                     else

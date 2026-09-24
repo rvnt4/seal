@@ -66,7 +66,7 @@ namespace seal
                 return true;
             }
 
-            bool insert(usize idx, const T& item) noexcept
+            bool insert(usz idx, const T& item) noexcept
             {
                 if (idx > _len) return false;
                 if (!ensure_capacity()) return false;
@@ -79,7 +79,7 @@ namespace seal
                     else
                     {
                         ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
-                        for (usize i = _len - 1; i > idx; --i)
+                        for (usz i = _len - 1; i > idx; --i)
                         {
                             _data[i] = static_cast<T&&>(_data[i - 1]);
                         }
@@ -94,7 +94,7 @@ namespace seal
                 return true;
             }
 
-            bool insert(usize idx, T&& item) noexcept
+            bool insert(usz idx, T&& item) noexcept
             {
                 if (idx > _len) return false;
                 if (!ensure_capacity()) return false;
@@ -107,7 +107,7 @@ namespace seal
                     else
                     {
                         ::new (static_cast<void*>(&_data[_len]), seal::placement_t{}) T(static_cast<T&&>(_data[_len - 1]));
-                        for (usize i = _len - 1; i > idx; --i)
+                        for (usz i = _len - 1; i > idx; --i)
                         {
                             _data[i] = static_cast<T&&>(_data[i - 1]);
                         }
@@ -122,14 +122,14 @@ namespace seal
                 return true;
             }
 
-            bool reserve(usize new_cap) noexcept
+            bool reserve(usz new_cap) noexcept
             {
                 if (new_cap <= _cap) return true;
                 if (!_alloc) return false;
-                if (new_cap > static_cast<usize>(-1) / sizeof(T)) return false; // multiplication overflow
+                if (new_cap > static_cast<usz>(-1) / sizeof(T)) return false; // multiplication overflow
 
                 T* new_data = static_cast<T*>(
-                    _alloc->allocate(static_cast<ssize>(sizeof(T) * new_cap), static_cast<ssize>(alignof(T))));
+                    _alloc->allocate(static_cast<ssz>(sizeof(T) * new_cap), static_cast<ssz>(alignof(T))));
                 if (!new_data) return false;
 
                 if constexpr (__is_trivially_copyable(T))
@@ -138,7 +138,7 @@ namespace seal
                 }
                 else
                 {
-                    for (usize i = 0; i < _len; ++i)
+                    for (usz i = 0; i < _len; ++i)
                     {
                         ::new (static_cast<void*>(&new_data[i]), seal::placement_t{}) T(static_cast<T&&>(_data[i]));
                         _data[i].~T();
@@ -155,14 +155,14 @@ namespace seal
             {
                 if constexpr (!__is_trivially_copyable(T))
                 {
-                    for (usize i = 0; i < _len; ++i)
+                    for (usz i = 0; i < _len; ++i)
                         _data[i].~T();
                 }
                 _len = 0;
             }
 
-            T& operator[](usize idx) noexcept { return _data[idx]; }
-            const T& operator[](usize idx) const noexcept { return _data[idx]; }
+            T& operator[](usz idx) noexcept { return _data[idx]; }
+            const T& operator[](usz idx) const noexcept { return _data[idx]; }
 
             bool empty() const noexcept { return _len == 0; }
 
@@ -178,7 +178,7 @@ namespace seal
                 }
             }
 
-            void erase(usize idx) noexcept
+            void erase(usz idx) noexcept
             {
                 if (idx >= _len) return;
                 if constexpr (__is_trivially_copyable(T))
@@ -190,7 +190,7 @@ namespace seal
                 }
                 else
                 {
-                    for (usize i = idx; i < _len - 1; ++i)
+                    for (usz i = idx; i < _len - 1; ++i)
                     {
                         _data[i] = static_cast<T&&>(_data[i + 1]);
                     }
@@ -203,8 +203,8 @@ namespace seal
             T* end() noexcept { return _data + _len; }
             const T* begin() const noexcept { return _data; }
             const T* end() const noexcept { return _data + _len; }
-            usize size() const noexcept { return _len; }
-            usize capacity() const noexcept { return _cap; }
+            usz size() const noexcept { return _len; }
+            usz capacity() const noexcept { return _cap; }
 
             T* data() noexcept { return _data; }
             const T* data() const noexcept { return _data; }
@@ -219,14 +219,14 @@ namespace seal
             bool ensure_capacity() noexcept
             {
                 if (_len < _cap) return true;
-                usize new_cap = (_cap == 0) ? 4 : _cap * 2;
+                usz new_cap = (_cap == 0) ? 4 : _cap * 2;
                 if (new_cap <= _cap) return false; // overflow
                 return reserve(new_cap);
             }
 
             T* _data = nullptr;
-            usize _cap = 0;
-            usize _len = 0;
+            usz _cap = 0;
+            usz _len = 0;
             IAllocator* _alloc = nullptr;
     };
 } // namespace seal

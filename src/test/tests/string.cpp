@@ -121,7 +121,7 @@ class StringTest : public ITest
             this->logInfo("testing String find and substr");
 
             seal::String s9("Hello World");
-            seal::usize idx = s9.find("World", 0);
+            seal::usz idx = s9.find("World", 0);
             if (idx != 6)
             {
                 this->logError("find() failed");

@@ -32,13 +32,13 @@ String::String(IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocat
 
 String::String(const char* s) noexcept : String(s, s ? seal::str_len(s) : 0) {}
 
-String::String(const char* s, usize len) noexcept : alloc_(g_strAllocator)
+String::String(const char* s, usz len) noexcept : alloc_(g_strAllocator)
 {
     repr_.sso[0] = '\0';
     if (s && len) (void)append(s, len);
 }
 
-String::String(const char* s, usize len, IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocator)
+String::String(const char* s, usz len, IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocator)
 {
     repr_.sso[0] = '\0';
     if (s && len) (void)append(s, len);
@@ -112,17 +112,17 @@ void String::free_heap() noexcept
     is_heap_ = false;
 }
 
-bool String::grow_to(usize needed) noexcept
+bool String::grow_to(usz needed) noexcept
 {
     if (needed <= capacity()) return true;
     if (!alloc_) return false;
-    if (needed > static_cast<usize>(-1) - 1) return false;
+    if (needed > static_cast<usz>(-1) - 1) return false;
 
-    usize new_cap = capacity() ? capacity() * 2 : 32;
+    usz new_cap = capacity() ? capacity() * 2 : 32;
     if (new_cap <= capacity()) new_cap = needed;
     if (new_cap < needed) new_cap = needed;
 
-    char* new_buf = static_cast<char*>(alloc_->allocate(static_cast<ssize>(new_cap + 1), 1));
+    char* new_buf = static_cast<char*>(alloc_->allocate(static_cast<ssz>(new_cap + 1), 1));
     if (!new_buf) return false;
 
     mem_copy(new_buf, c_str(), len_ + 1);
@@ -134,18 +134,18 @@ bool String::grow_to(usize needed) noexcept
     return true;
 }
 
-bool String::reserve(usize new_cap) noexcept
+bool String::reserve(usz new_cap) noexcept
 {
     return grow_to(new_cap);
 }
 
-bool String::resize(usize new_len, char fill) noexcept
+bool String::resize(usz new_len, char fill) noexcept
 {
     if (new_len > len_)
     {
         if (!grow_to(new_len)) return false;
         char* buf = data_mut();
-        for (usize i = len_; i < new_len; ++i)
+        for (usz i = len_; i < new_len; ++i)
             buf[i] = fill;
     }
 
@@ -154,11 +154,11 @@ bool String::resize(usize new_len, char fill) noexcept
     return true;
 }
 
-bool String::append(const char* s, usize len) noexcept
+bool String::append(const char* s, usz len) noexcept
 {
     if (len == 0) return true;
     if (!s) return false;
-    usize needed = len_ + len;
+    usz needed = len_ + len;
     if (needed < len_) return false;
     if (!grow_to(needed)) return false;
     char* buf = data_mut();
@@ -191,43 +191,43 @@ void String::clear() noexcept
     data_mut()[0] = '\0';
 }
 
-bool String::at(usize idx, char& out) const noexcept
+bool String::at(usz idx, char& out) const noexcept
 {
     if (idx >= len_) return false;
     out = c_str()[idx];
     return true;
 }
 
-usize String::find(const char* needle, usize start) const noexcept
+usz String::find(const char* needle, usz start) const noexcept
 {
     if (!needle) return npos;
 
-    usize nlen = seal::str_len(needle);
+    usz nlen = seal::str_len(needle);
 
     if (nlen == 0) return start <= len_ ? start : npos;
     if (start >= len_) return npos;
 
     const char* hay = c_str();
 
-    for (usize i = start; i + nlen <= len_; ++i)
+    for (usz i = start; i + nlen <= len_; ++i)
         if (mem_cmp(hay + i, needle, nlen) == 0) return i;
 
     return npos;
 }
 
-String String::substr(usize pos, usize len) const noexcept
+String String::substr(usz pos, usz len) const noexcept
 {
     if (pos > len_) pos = len_;
 
-    usize avail = len_ - pos;
-    usize take = (len == npos || len > avail) ? avail : len;
+    usz avail = len_ - pos;
+    usz take = (len == npos || len > avail) ? avail : len;
 
     return String(c_str() + pos, take, alloc_);
 }
 
 int String::compare(const String& other) const noexcept
 {
-    usize min_len = len_ < other.len_ ? len_ : other.len_;
+    usz min_len = len_ < other.len_ ? len_ : other.len_;
     int r = min_len ? mem_cmp(c_str(), other.c_str(), min_len) : 0;
 
     if (r != 0) return r;
@@ -240,7 +240,7 @@ int String::compare(const String& other) const noexcept
 void String::swap(String& other) noexcept
 {
     Repr tmp_repr = repr_;
-    usize tmp_len = len_;
+    usz tmp_len = len_;
     bool tmp_heap = is_heap_;
     IAllocator* tmp_alloc = alloc_;
 
@@ -286,7 +286,7 @@ namespace seal
     String operator+(const String& a, const char* b) noexcept
     {
         String res(a.allocator());
-        usize blen = seal::str_len(b);
+        usz blen = seal::str_len(b);
         if (res.reserve(a.size() + blen))
         {
             (void)res.append(a);
@@ -298,7 +298,7 @@ namespace seal
     String operator+(const char* a, const String& b) noexcept
     {
         String res(b.allocator());
-        usize alen = seal::str_len(a);
+        usz alen = seal::str_len(a);
         if (res.reserve(alen + b.size()))
         {
             (void)res.append(a, alen);
@@ -311,21 +311,21 @@ namespace seal
 /*
     stringview impl
 */
-usize StringView::find(StringView needle, usize start) const noexcept
+usz StringView::find(StringView needle, usz start) const noexcept
 {
     if (needle._size == 0) return start <= _size ? start : npos;
     if (start > _size) return npos;
     if (needle._size > _size - start) return npos;
 
-    for (usize i = start; i <= _size - needle._size; ++i)
+    for (usz i = start; i <= _size - needle._size; ++i)
         if (seal::mem_cmp(_data + i, needle._data, needle._size) == 0) return i;
 
     return npos;
 }
 
-StringView StringView::substr(usize pos, usize count) const noexcept
+StringView StringView::substr(usz pos, usz count) const noexcept
 {
     if (pos >= _size) return {};
-    usize rcount = (count < _size - pos) ? count : _size - pos;
+    usz rcount = (count < _size - pos) ? count : _size - pos;
     return StringView(_data + pos, rcount);
 }

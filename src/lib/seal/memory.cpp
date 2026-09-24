@@ -10,9 +10,9 @@
 #elif defined(_WIN32)
 extern "C"
 {
-    __declspec(dllimport) void* __stdcall VirtualAlloc(void* lpAddress, seal::ssize dwSize, unsigned long flAllocationType,
+    __declspec(dllimport) void* __stdcall VirtualAlloc(void* lpAddress, seal::ssz dwSize, unsigned long flAllocationType,
                                                        unsigned long flProtect);
-    __declspec(dllimport) int __stdcall VirtualFree(void* lpAddress, seal::ssize dwSize, unsigned long dwFreeType);
+    __declspec(dllimport) int __stdcall VirtualFree(void* lpAddress, seal::ssz dwSize, unsigned long dwFreeType);
 }
 #elif defined(__unix__) || defined(__APPLE__) || defined(__linux__)
     #include <sys/mman.h>
@@ -22,7 +22,7 @@ using namespace seal;
 
 namespace
 {
-    void* allocatePages(ssize bytes)
+    void* allocatePages(ssz bytes)
     {
 #if defined(_KERNEL_MODE)
         return ExAllocatePool2(POOL_FLAG_NON_PAGED, bytes, 'lseS');
@@ -38,7 +38,7 @@ namespace
 #endif
     }
 
-    void freePages(void* ptr, ssize bytes)
+    void freePages(void* ptr, ssz bytes)
     {
         if (!ptr) return;
 #if defined(_KERNEL_MODE)
@@ -55,13 +55,13 @@ namespace
 #endif
     }
 
-    ssize normalizeAlignment(ssize alignment)
+    ssz normalizeAlignment(ssz alignment)
     {
-        const ssize minAlign = static_cast<ssize>(alignof(void*));
+        const ssz minAlign = static_cast<ssz>(alignof(void*));
         if (alignment <= minAlign) return minAlign;
         if (isPowerOfTwo(alignment)) return alignment;
 
-        ssize p = minAlign;
+        ssz p = minAlign;
         while (p < alignment)
             p <<= 1;
         return p;
@@ -92,20 +92,20 @@ DynamicHeapAllocator::~DynamicHeapAllocator()
     }
 }
 
-void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
+void* DynamicHeapAllocator::allocate(ssz size, ssz alignment)
 {
     if (size <= 0) return nullptr;
-    if (size > (static_cast<ssize>(1) << 60)) return nullptr;
+    if (size > (static_cast<ssz>(1) << 60)) return nullptr;
 
-    const ssize eff_align = normalizeAlignment(alignment);
-    const ssize payload_size = alignUp(size, eff_align);
-    const ssize reserve = HEADER_SIZE + payload_size + eff_align + static_cast<ssize>(sizeof(void*));
+    const ssz eff_align = normalizeAlignment(alignment);
+    const ssz payload_size = alignUp(size, eff_align);
+    const ssz reserve = HEADER_SIZE + payload_size + eff_align + static_cast<ssz>(sizeof(void*));
 
     BlockHeader* block = findBestFit(reserve);
 
     if (!block)
     {
-        ssize req_size = reserve + static_cast<ssize>(sizeof(PageChunk));
+        ssz req_size = reserve + static_cast<ssz>(sizeof(PageChunk));
         if (req_size < MIN_CHUNK_SIZE) req_size = MIN_CHUNK_SIZE;
 
         void* raw = allocatePages(req_size);
@@ -119,7 +119,7 @@ void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
 
         unsigned char* block_start = static_cast<unsigned char*>(raw) + sizeof(PageChunk);
         block = reinterpret_cast<BlockHeader*>(block_start);
-        block->size = req_size - static_cast<ssize>(sizeof(PageChunk));
+        block->size = req_size - static_cast<ssz>(sizeof(PageChunk));
         block->requestedSize = 0;
         block->isFree = true;
         block->next = nullptr;
@@ -133,11 +133,11 @@ void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
     unsigned char* block_bytes = reinterpret_cast<unsigned char*>(block);
     unsigned char* base = block_bytes + HEADER_SIZE;
     unsigned char* data = reinterpret_cast<unsigned char*>(alignPtrUp(reinterpret_cast<sealptr>(base), eff_align));
-    if (data - base < static_cast<ssize>(sizeof(void*))) data += eff_align;
+    if (data - base < static_cast<ssz>(sizeof(void*))) data += eff_align;
 
     *reinterpret_cast<BlockHeader**>(data - sizeof(void*)) = block;
 
-    const ssize used = static_cast<ssize>(data - block_bytes) + payload_size;
+    const ssz used = static_cast<ssz>(data - block_bytes) + payload_size;
     splitBlock(block, used);
     removeFreeBlock(block);
 
@@ -148,7 +148,7 @@ void* DynamicHeapAllocator::allocate(ssize size, ssize alignment)
     return data;
 }
 
-void* DynamicHeapAllocator::reallocate(void* ptr, ssize newSize, ssize alignment)
+void* DynamicHeapAllocator::reallocate(void* ptr, ssz newSize, ssz alignment)
 {
     if (!ptr) return allocate(newSize, alignment);
 
@@ -158,16 +158,16 @@ void* DynamicHeapAllocator::reallocate(void* ptr, ssize newSize, ssize alignment
         return nullptr;
     }
 
-    const ssize eff_align = normalizeAlignment(alignment);
+    const ssz eff_align = normalizeAlignment(alignment);
     unsigned char* data = static_cast<unsigned char*>(ptr);
     BlockHeader* block = *reinterpret_cast<BlockHeader**>(data - sizeof(void*));
 
-    const ssize overhead = static_cast<ssize>(data - reinterpret_cast<unsigned char*>(block));
-    const ssize required = overhead + alignUp(newSize, eff_align);
+    const ssz overhead = static_cast<ssz>(data - reinterpret_cast<unsigned char*>(block));
+    const ssz required = overhead + alignUp(newSize, eff_align);
 
     if (block->size >= required)
     {
-        const ssize old_size = block->size;
+        const ssz old_size = block->size;
         splitBlock(block, required);
         _totalAllocatedBytes -= (old_size - block->size);
         block->requestedSize = newSize;
@@ -177,7 +177,7 @@ void* DynamicHeapAllocator::reallocate(void* ptr, ssize newSize, ssize alignment
     void* newPtr = allocate(newSize, eff_align);
     if (!newPtr) return nullptr;
 
-    ssize copySize = (newSize < block->requestedSize) ? newSize : block->requestedSize;
+    ssz copySize = (newSize < block->requestedSize) ? newSize : block->requestedSize;
     if (copySize > 0) seal::mem_copy(newPtr, ptr, copySize);
 
     deallocate(ptr);
@@ -201,7 +201,7 @@ void DynamicHeapAllocator::deallocate(void* ptr)
     coalesce(block);
 }
 
-DynamicHeapAllocator::BlockHeader* DynamicHeapAllocator::findBestFit(ssize size)
+DynamicHeapAllocator::BlockHeader* DynamicHeapAllocator::findBestFit(ssz size)
 {
     BlockHeader* best = nullptr;
     BlockHeader* curr = _freeListHead;
@@ -220,9 +220,9 @@ DynamicHeapAllocator::BlockHeader* DynamicHeapAllocator::findBestFit(ssize size)
     return best;
 }
 
-void DynamicHeapAllocator::splitBlock(BlockHeader* block, ssize size)
+void DynamicHeapAllocator::splitBlock(BlockHeader* block, ssz size)
 {
-    ssize min_split_size = HEADER_SIZE + 8;
+    ssz min_split_size = HEADER_SIZE + 8;
 
     if (block->size >= size + min_split_size)
     {

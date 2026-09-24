@@ -14,7 +14,7 @@ namespace seal
         buffer.allocator = alloc;
         buffer.size = content.size();
 
-        const ssize request = static_cast<ssize>(buffer.size ? buffer.size : 1);
+        const ssz request = static_cast<ssz>(buffer.size ? buffer.size : 1);
         buffer.data = static_cast<unsigned char*>(alloc->allocate(request, 1));
         if (!buffer.data)
         {
@@ -22,7 +22,7 @@ namespace seal
             return buffer;
         }
 
-        if (buffer.size > 0) mem_copy(buffer.data, content.data(), static_cast<ssize>(buffer.size));
+        if (buffer.size > 0) mem_copy(buffer.data, content.data(), static_cast<ssz>(buffer.size));
         return buffer;
     }
 
@@ -47,7 +47,7 @@ namespace seal
 
         if (!_mounts.push_back(MountPoint(static_cast<String&&>(path), provider, priority))) return;
 
-        usize i = _mounts.size() - 1;
+        usz i = _mounts.size() - 1;
         while (i > 0)
         {
             MountPoint& prev = _mounts[i - 1];
@@ -67,7 +67,7 @@ namespace seal
     {
         String normalizedPath = trimPathSeparators(normalizePath(virtualPath), _allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             if (_mounts[i].virtualPath == normalizedPath)
             {
@@ -82,7 +82,7 @@ namespace seal
     {
         if (!provider) return false;
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             if (_mounts[i].provider.get() == provider)
             {
@@ -102,7 +102,7 @@ namespace seal
     {
         String searchPath = trimPathSeparators(normalizePath(path), _allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             String relativePath;
             if (getRelativePath(_mounts[i], searchPath, relativePath))
@@ -117,7 +117,7 @@ namespace seal
     {
         String searchPath = trimPathSeparators(normalizePath(path), _allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             String relativePath;
             if (getRelativePath(_mounts[i], searchPath, relativePath))
@@ -144,7 +144,7 @@ namespace seal
     {
         String searchPath = trimPathSeparators(normalizePath(path), _allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             String relativePath;
             if (getRelativePath(_mounts[i], searchPath, relativePath))
@@ -170,16 +170,16 @@ namespace seal
 
         Vector<String> mergedFiles(_allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             String relativePath;
             if (getRelativePath(_mounts[i], searchPath, relativePath))
             {
                 Vector<String> files = _mounts[i].provider->listDirectory(relativePath, _allocator);
-                for (usize f = 0; f < files.size(); ++f)
+                for (usz f = 0; f < files.size(); ++f)
                 {
                     bool found = false;
-                    for (usize m = 0; m < mergedFiles.size(); ++m)
+                    for (usz m = 0; m < mergedFiles.size(); ++m)
                     {
                         if (mergedFiles[m] == files[f])
                         {
@@ -203,7 +203,7 @@ namespace seal
         if (path.empty()) return String("/", 1, _allocator);
 
         String result(_allocator);
-        for (usize i = 0; i < path.size(); ++i)
+        for (usz i = 0; i < path.size(); ++i)
         {
             char c = path.data()[i];
             if (isPathSeparator(c))
@@ -213,10 +213,10 @@ namespace seal
         }
 
         Vector<String> parts(_allocator);
-        usize pos = 0;
+        usz pos = 0;
         while (pos < result.size())
         {
-            usize next = result.find("/", pos);
+            usz next = result.find("/", pos);
             if (next == String::npos) next = result.size();
 
             String part = result.substr(pos, next - pos);
@@ -235,7 +235,7 @@ namespace seal
         if (parts.empty()) return String("/", 1, _allocator);
 
         result.clear();
-        for (usize i = 0; i < parts.size(); ++i)
+        for (usz i = 0; i < parts.size(); ++i)
         {
             (void)result.push_back('/');
             (void)result.append(parts[i]);
@@ -248,7 +248,7 @@ namespace seal
     {
         String searchPath = trimPathSeparators(normalizePath(path), _allocator);
 
-        for (usize i = 0; i < _mounts.size(); ++i)
+        for (usz i = 0; i < _mounts.size(); ++i)
         {
             if (matchesMount(_mounts[i], searchPath, relativePath)) return &_mounts[i];
         }
@@ -268,7 +268,7 @@ namespace seal
 
     String VirtualFileSystem::trimPathSeparators(StringView path, IAllocator* alloc)
     {
-        usize start = 0;
+        usz start = 0;
         while (start < path.size() && isPathSeparator(path.data()[start]))
         {
             start++;
@@ -276,7 +276,7 @@ namespace seal
 
         if (start == path.size()) return String("/", 1, alloc);
 
-        usize end = path.size() - 1;
+        usz end = path.size() - 1;
         while (end > start && isPathSeparator(path.data()[end]))
         {
             end--;
@@ -315,11 +315,11 @@ namespace seal
     /*
         mountpoint
     */
-    usize VirtualFileSystem::MountPoint::countPathDepth(StringView path)
+    usz VirtualFileSystem::MountPoint::countPathDepth(StringView path)
     {
         if (path == StringView("/")) return 0;
-        usize depth = 1;
-        for (usize i = 0; i < path.size(); ++i)
+        usz depth = 1;
+        for (usz i = 0; i < path.size(); ++i)
             if (isPathSeparator(path.data()[i])) depth++;
         return depth;
     }

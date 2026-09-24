@@ -13,20 +13,20 @@ namespace seal
         Error
     };
 
-    inline constexpr usize logTypeCount = 4;
+    inline constexpr usz logTypeCount = 4;
 
     inline constexpr StringView logTypeNames[]{"VERBOSE", "INFO", "WARNING", "ERROR"};
     inline constexpr StringView logTypeColors[]{"\x1b[34;40m", "\x1b[32;40m", "\x1b[30;43m", "\x1b[97;41m"};
 
     inline constexpr StringView getLogTypeName(LogType type)
     {
-        const usize idx = static_cast<usize>(type);
+        const usz idx = static_cast<usz>(type);
         return idx < logTypeCount ? logTypeNames[idx] : StringView("UNKNOWN");
     }
 
     inline constexpr StringView getLogTypeColor(LogType type)
     {
-        const usize idx = static_cast<usize>(type);
+        const usz idx = static_cast<usz>(type);
         return idx < logTypeCount ? logTypeColors[idx] : StringView("\x1b[0m");
     }
 
@@ -72,12 +72,12 @@ namespace seal
                 return _sinks.push_back(static_cast<SharedPtr<ILogSink>&&>(sink));
             }
 
-            [[nodiscard]] usize sinkCount() const { return _sinks.size(); }
+            [[nodiscard]] usz sinkCount() const { return _sinks.size(); }
 
         protected:
             void write(LogType type, const String& message)
             {
-                for (usize i = 0; i < _sinks.size(); ++i)
+                for (usz i = 0; i < _sinks.size(); ++i)
                 {
                     if (_sinks[i])
                     {

@@ -25,7 +25,7 @@ namespace seal
     template <typename... T> class Event
     {
         public:
-            using ConnectionId = usize;
+            using ConnectionId = usz;
             static constexpr ConnectionId InvalidConnection = 0;
 
             explicit Event(IAllocator* alloc)
@@ -46,7 +46,7 @@ namespace seal
             bool removeListener(ConnectionId id)
             {
                 if (id == InvalidConnection) return false;
-                for (usize i = 0; i < _listeners.size(); ++i)
+                for (usz i = 0; i < _listeners.size(); ++i)
                 {
                     if (_listeners[i].id == id && _listeners[i].listener.stub)
                     {
@@ -67,9 +67,9 @@ namespace seal
 
             void run(const T&... args)
             {
-                const usize count = _listeners.size();
+                const usz count = _listeners.size();
                 _dispatching = true;
-                for (usize i = 0; i < count; ++i)
+                for (usz i = 0; i < count; ++i)
                 {
                     if (i < _listeners.size() && _listeners[i].listener.stub) _listeners[i].listener(args...);
                 }
@@ -82,7 +82,7 @@ namespace seal
             {
                 if (_dispatching)
                 {
-                    for (usize i = 0; i < _listeners.size(); ++i)
+                    for (usz i = 0; i < _listeners.size(); ++i)
                         _listeners[i].listener.stub = nullptr;
                     _pendingRemovals = true;
                 }
@@ -92,7 +92,7 @@ namespace seal
                 }
             }
 
-            usize listenerCount() const { return _listeners.size(); }
+            usz listenerCount() const { return _listeners.size(); }
 
         private:
             struct ListenerInfo
@@ -103,7 +103,7 @@ namespace seal
 
             void compact()
             {
-                for (usize i = 0; i < _listeners.size();)
+                for (usz i = 0; i < _listeners.size();)
                 {
                     if (!_listeners[i].listener.stub)
                         _listeners.erase(i);

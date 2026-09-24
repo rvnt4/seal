@@ -19,7 +19,7 @@ class MockProvider : public seal::IFileProvider
 
         bool exists(seal::StringView path) const override
         {
-            for (seal::usize i = 0; i < files.size(); ++i)
+            for (seal::usz i = 0; i < files.size(); ++i)
                 if (files[i] == seal::String(path.data(), path.size())) return true;
             return false;
         }
@@ -40,7 +40,7 @@ class MockProvider : public seal::IFileProvider
 
         seal::VFSResult deleteFile(seal::StringView path) override
         {
-            for (seal::usize i = 0; i < files.size(); ++i)
+            for (seal::usz i = 0; i < files.size(); ++i)
             {
                 if (files[i] == seal::String(path.data(), path.size()))
                 {
@@ -56,7 +56,7 @@ class MockProvider : public seal::IFileProvider
         seal::Vector<seal::String> listDirectory(seal::StringView /*path*/, seal::IAllocator* a) const override
         {
             seal::Vector<seal::String> res(a);
-            for (seal::usize i = 0; i < files.size(); ++i)
+            for (seal::usz i = 0; i < files.size(); ++i)
                 res.push_back(files[i]);
             return res;
         }
@@ -134,7 +134,7 @@ class VFSTest : public ITest
             logInfo("Listing 'scripts' folder");
 
             auto list = vfs.listDirectory(seal::StringView("scripts"));
-            for (seal::usize i = 0; i < list.size(); ++i)
+            for (seal::usz i = 0; i < list.size(); ++i)
                 logInfo("\t* {}", list[i].c_str());
 
             /*
