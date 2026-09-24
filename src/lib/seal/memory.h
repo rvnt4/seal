@@ -109,7 +109,7 @@ namespace seal
         return const_cast<void*>(mem_chr(static_cast<const void*>(ptr), ch, count));
     }
 
-    inline usize strlen(const char* s) noexcept
+    inline usize str_len(const char* s) noexcept
     {
         if (!s) return 0;
         usize n = 0;

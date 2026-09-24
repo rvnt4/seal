@@ -30,7 +30,7 @@ String::String(IAllocator* alloc) noexcept : alloc_(alloc ? alloc : g_strAllocat
     repr_.sso[0] = '\0';
 }
 
-String::String(const char* s) noexcept : String(s, s ? seal::strlen(s) : 0) {}
+String::String(const char* s) noexcept : String(s, s ? seal::str_len(s) : 0) {}
 
 String::String(const char* s, usize len) noexcept : alloc_(g_strAllocator)
 {
@@ -202,7 +202,7 @@ usize String::find(const char* needle, usize start) const noexcept
 {
     if (!needle) return npos;
 
-    usize nlen = seal::strlen(needle);
+    usize nlen = seal::str_len(needle);
 
     if (nlen == 0) return start <= len_ ? start : npos;
     if (start >= len_) return npos;
@@ -286,7 +286,7 @@ namespace seal
     String operator+(const String& a, const char* b) noexcept
     {
         String res(a.allocator());
-        usize blen = seal::strlen(b);
+        usize blen = seal::str_len(b);
         if (res.reserve(a.size() + blen))
         {
             (void)res.append(a);
@@ -298,7 +298,7 @@ namespace seal
     String operator+(const char* a, const String& b) noexcept
     {
         String res(b.allocator());
-        usize alen = seal::strlen(a);
+        usize alen = seal::str_len(a);
         if (res.reserve(alen + b.size()))
         {
             (void)res.append(a, alen);

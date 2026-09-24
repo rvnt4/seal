@@ -90,7 +90,7 @@ namespace seal
             static constexpr usize npos = static_cast<usize>(-1);
 
             constexpr StringView() noexcept = default;
-            constexpr StringView(const char* s) noexcept : _data(s), _size(strLen(s)) {}
+            constexpr StringView(const char* s) noexcept : _data(s), _size(str_len(s)) {}
             constexpr StringView(const char* s, usize len) noexcept : _data(s), _size(len) {}
             StringView(const String& s) noexcept : _data(s.c_str()), _size(s.size()) {}
 
@@ -122,7 +122,7 @@ namespace seal
             }
 
         private:
-            static constexpr usize strLen(const char* s) noexcept
+            static constexpr usize str_len(const char* s) noexcept
             {
                 if (!s) return 0;
                 usize len = 0;
