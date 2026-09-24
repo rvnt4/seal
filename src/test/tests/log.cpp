@@ -7,7 +7,7 @@
 class MockSink : public seal::ILogSink
 {
     public:
-        seal::LogType lastType = seal::LogType::INFO;
+        seal::LogType lastType = seal::LogType::Info;
         seal::String lastLoggerName;
         seal::String lastMessage;
         int callCount = 0;
@@ -50,7 +50,7 @@ class LoggerTest : public ITest
                 return;
             }
 
-            if (seal::getLogTypeName(seal::LogType::WARNING) != seal::StringView("WARNING"))
+            if (seal::getLogTypeName(seal::LogType::Warning) != seal::StringView("WARNING"))
             {
                 this->logError("getLogTypeName failed");
                 return;
@@ -73,7 +73,7 @@ class LoggerTest : public ITest
                 return;
             }
 
-            if (mockSink->lastType != seal::LogType::INFO)
+            if (mockSink->lastType != seal::LogType::Info)
             {
                 this->logError("log type mismatch (expected INFO)");
                 return;
@@ -108,7 +108,7 @@ class LoggerTest : public ITest
                 return;
             }
 
-            if (mockSink->lastType != seal::LogType::ERROR ||
+            if (mockSink->lastType != seal::LogType::Error ||
                 mockSink->lastMessage != seal::String("Fatal error code: 500"))
             {
                 this->logError("last log level (ERROR) message mismatch");

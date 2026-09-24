@@ -7,10 +7,10 @@ namespace seal
 {
     enum class LogType
     {
-        VERBOSE = 0,
-        INFO,
-        WARNING,
-        ERROR
+        Verbose = 0,
+        Info,
+        Warning,
+        Error
     };
 
     inline constexpr usize logTypeCount = 4;
@@ -47,22 +47,22 @@ namespace seal
 
             template <typename... Args> void verbose(StringView fmt, const Args&... args)
             {
-                write(LogType::VERBOSE, format(_alloc, fmt, args...));
+                write(LogType::Verbose, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void info(StringView fmt, const Args&... args)
             {
-                write(LogType::INFO, format(_alloc, fmt, args...));
+                write(LogType::Info, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void warning(StringView fmt, const Args&... args)
             {
-                write(LogType::WARNING, format(_alloc, fmt, args...));
+                write(LogType::Warning, format(_alloc, fmt, args...));
             }
 
             template <typename... Args> void error(StringView fmt, const Args&... args)
             {
-                write(LogType::ERROR, format(_alloc, fmt, args...));
+                write(LogType::Error, format(_alloc, fmt, args...));
             }
 
             [[nodiscard]] StringView getName() const { return _name; }
