@@ -66,9 +66,9 @@ namespace seal
         const auto* s = static_cast<const unsigned char*>(src);
 
         const sealptr d_addr = reinterpret_cast<sealptr>(d);
-        const sealptr s_addr = reinterpret_cast<sealptr>(s);
+        const sealptr src_addr = reinterpret_cast<sealptr>(s);
 
-        if (d_addr < s_addr)
+        if (d_addr < src_addr)
         {
             for (ssz i = 0; i < count; ++i)
                 d[i] = s[i];
