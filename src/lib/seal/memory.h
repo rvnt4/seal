@@ -39,7 +39,7 @@ namespace seal
     /*
         generic mem fns
     */
-    inline void* memset(void* dest, int value, ssize count)
+    inline void* mem_set(void* dest, int value, ssize count)
     {
         if (count <= 0) return dest;
         auto* ptr = static_cast<unsigned char*>(dest);
@@ -49,7 +49,7 @@ namespace seal
         return dest;
     }
 
-    inline void* memcpy(void* dest, const void* src, ssize count)
+    inline void* mem_copy(void* dest, const void* src, ssize count)
     {
         if (count <= 0) return dest;
         auto* d = static_cast<unsigned char*>(dest);
@@ -59,7 +59,7 @@ namespace seal
         return dest;
     }
 
-    inline void* memmove(void* dest, const void* src, ssize count)
+    inline void* mem_move(void* dest, const void* src, ssize count)
     {
         if (dest == src || count <= 0) return dest;
         auto* d = static_cast<unsigned char*>(dest);
@@ -81,7 +81,7 @@ namespace seal
         return dest;
     }
 
-    inline int memcmp(const void* ptr1, const void* ptr2, ssize count)
+    inline int mem_cmp(const void* ptr1, const void* ptr2, ssize count)
     {
         const auto* s1 = static_cast<const unsigned char*>(ptr1);
         const auto* s2 = static_cast<const unsigned char*>(ptr2);
@@ -92,7 +92,7 @@ namespace seal
         return 0;
     }
 
-    inline const void* memchr(const void* ptr, int ch, ssize count)
+    inline const void* mem_chr(const void* ptr, int ch, ssize count)
     {
         if (!ptr || count <= 0) return nullptr;
         const auto* p = static_cast<const unsigned char*>(ptr);
@@ -104,9 +104,9 @@ namespace seal
         return nullptr;
     }
 
-    inline void* memchr(void* ptr, int ch, ssize count)
+    inline void* mem_chr(void* ptr, int ch, ssize count)
     {
-        return const_cast<void*>(memchr(static_cast<const void*>(ptr), ch, count));
+        return const_cast<void*>(mem_chr(static_cast<const void*>(ptr), ch, count));
     }
 
     inline usize strlen(const char* s) noexcept
@@ -232,7 +232,7 @@ namespace seal
                     ssize maxCopy = Capacity - offset;
                     if (maxCopy < 0) maxCopy = 0;
                     ssize copySize = (newSize < maxCopy) ? newSize : maxCopy;
-                    if (copySize > 0) seal::memcpy(newPtr, ptr, copySize);
+                    if (copySize > 0) seal::mem_copy(newPtr, ptr, copySize);
                 }
                 return newPtr;
             }

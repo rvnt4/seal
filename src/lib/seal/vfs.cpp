@@ -22,7 +22,7 @@ namespace seal
             return buffer;
         }
 
-        if (buffer.size > 0) memcpy(buffer.data, content.data(), static_cast<ssize>(buffer.size));
+        if (buffer.size > 0) mem_copy(buffer.data, content.data(), static_cast<ssize>(buffer.size));
         return buffer;
     }
 

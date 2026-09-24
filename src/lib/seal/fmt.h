@@ -146,7 +146,7 @@ namespace seal
                       "Double size mismatch for IEEE 754 bitcast"); // should i keep this actually idk
 
         unsigned long long bits = 0;
-        seal::memcpy(&bits, &val, sizeof(bits));
+        seal::mem_copy(&bits, &val, sizeof(bits));
         const bool isNeg = (bits >> 63) != 0;
         if (isNeg)
         {

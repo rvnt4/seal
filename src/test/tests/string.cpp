@@ -25,7 +25,7 @@ class StringTest : public ITest
             }
 
             seal::String s2("Hello, Seal!");
-            if (s2.size() != 12 || !s2.is_sso() || seal::memcmp(s2.c_str(), "Hello, Seal!", 13) != 0)
+            if (s2.size() != 12 || !s2.is_sso() || seal::mem_cmp(s2.c_str(), "Hello, Seal!", 13) != 0)
             {
                 this->logError("short string constructor or SSO failed");
                 return;

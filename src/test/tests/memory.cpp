@@ -15,43 +15,43 @@ class MemTest : public ITest
             this->logInfo("testing memory helpers");
 
             char buffer[10] = {0};
-            seal::memset(buffer, 'A', 5);
+            seal::mem_set(buffer, 'A', 5);
             for (int i = 0; i < 5; i++)
             {
                 if (buffer[i] != 'A')
                 {
-                    this->logError("memset failed: invalid char");
+                    this->logError("mem_set failed: invalid char");
                     return;
                 }
             }
 
             if (buffer[5] != '\0')
             {
-                this->logError("memset failed: missing null terminator");
+                this->logError("mem_set failed: missing null terminator");
                 return;
             }
 
             char src[5] = "test";
             char dest[5] = {0};
-            seal::memcpy(dest, src, 5);
-            if (seal::memcmp(src, dest, 5) != 0)
+            seal::mem_copy(dest, src, 5);
+            if (seal::mem_cmp(src, dest, 5) != 0)
             {
-                this->logError("memcpy/memcmp failed: mismatch?");
+                this->logError("mem_copy/mem_cmp failed: mismatch?");
                 return;
             }
 
             char overlap[10] = "abcdefghi";
-            seal::memmove(overlap + 1, overlap, 8);
-            if (seal::memcmp(overlap + 1, "abcdefgh", 8) != 0)
+            seal::mem_move(overlap + 1, overlap, 8);
+            if (seal::mem_cmp(overlap + 1, "abcdefgh", 8) != 0)
             {
-                this->logError("memmove failed on overlapping range");
+                this->logError("mem_move failed on overlapping range");
                 return;
             }
 
-            const char* found = static_cast<const char*>(seal::memchr(src, 's', 4));
+            const char* found = static_cast<const char*>(seal::mem_chr(src, 's', 4));
             if (found == nullptr || *found != 's')
             {
-                this->logError("memchr failed: unexpected found value");
+                this->logError("mem_chr failed: unexpected found value");
                 return;
             }
 

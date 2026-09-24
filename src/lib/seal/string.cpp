@@ -57,7 +57,7 @@ String::String(String&& other) noexcept : alloc_(other.alloc_)
     if (is_heap_)
         repr_.heap = other.repr_.heap;
     else
-        memcpy(repr_.sso, other.repr_.sso, len_ + 1);
+        mem_copy(repr_.sso, other.repr_.sso, len_ + 1);
 
     other.len_ = 0;
     other.is_heap_ = false;
@@ -89,7 +89,7 @@ String& String::operator=(String&& other) noexcept
     if (is_heap_)
         repr_.heap = other.repr_.heap;
     else
-        memcpy(repr_.sso, other.repr_.sso, len_ + 1);
+        mem_copy(repr_.sso, other.repr_.sso, len_ + 1);
 
     other.len_ = 0;
     other.is_heap_ = false;
@@ -125,7 +125,7 @@ bool String::grow_to(usize needed) noexcept
     char* new_buf = static_cast<char*>(alloc_->allocate(static_cast<ssize>(new_cap + 1), 1));
     if (!new_buf) return false;
 
-    memcpy(new_buf, c_str(), len_ + 1);
+    mem_copy(new_buf, c_str(), len_ + 1);
     free_heap();
 
     repr_.heap.data = new_buf;
@@ -162,7 +162,7 @@ bool String::append(const char* s, usize len) noexcept
     if (needed < len_) return false;
     if (!grow_to(needed)) return false;
     char* buf = data_mut();
-    memcpy(buf + len_, s, len);
+    mem_copy(buf + len_, s, len);
     len_ = needed;
     buf[len_] = '\0';
     return true;
@@ -210,7 +210,7 @@ usize String::find(const char* needle, usize start) const noexcept
     const char* hay = c_str();
 
     for (usize i = start; i + nlen <= len_; ++i)
-        if (memcmp(hay + i, needle, nlen) == 0) return i;
+        if (mem_cmp(hay + i, needle, nlen) == 0) return i;
 
     return npos;
 }
@@ -228,7 +228,7 @@ String String::substr(usize pos, usize len) const noexcept
 int String::compare(const String& other) const noexcept
 {
     usize min_len = len_ < other.len_ ? len_ : other.len_;
-    int r = min_len ? memcmp(c_str(), other.c_str(), min_len) : 0;
+    int r = min_len ? mem_cmp(c_str(), other.c_str(), min_len) : 0;
 
     if (r != 0) return r;
     if (len_ < other.len_) return -1;
@@ -318,7 +318,7 @@ usize StringView::find(StringView needle, usize start) const noexcept
     if (needle._size > _size - start) return npos;
 
     for (usize i = start; i <= _size - needle._size; ++i)
-        if (seal::memcmp(_data + i, needle._data, needle._size) == 0) return i;
+        if (seal::mem_cmp(_data + i, needle._data, needle._size) == 0) return i;
 
     return npos;
 }

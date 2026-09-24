@@ -74,7 +74,7 @@ namespace seal
                 {
                     if constexpr (__is_trivially_copyable(T))
                     {
-                        seal::memmove(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
+                        seal::mem_move(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
                     }
                     else
                     {
@@ -102,7 +102,7 @@ namespace seal
                 {
                     if constexpr (__is_trivially_copyable(T))
                     {
-                        seal::memmove(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
+                        seal::mem_move(&_data[idx + 1], &_data[idx], (_len - idx) * sizeof(T));
                     }
                     else
                     {
@@ -134,7 +134,7 @@ namespace seal
 
                 if constexpr (__is_trivially_copyable(T))
                 {
-                    if (_len > 0) seal::memcpy(new_data, _data, _len * sizeof(T));
+                    if (_len > 0) seal::mem_copy(new_data, _data, _len * sizeof(T));
                 }
                 else
                 {
@@ -185,7 +185,7 @@ namespace seal
                 {
                     if (idx < _len - 1)
                     {
-                        seal::memmove(&_data[idx], &_data[idx + 1], (_len - idx - 1) * sizeof(T));
+                        seal::mem_move(&_data[idx], &_data[idx + 1], (_len - idx - 1) * sizeof(T));
                     }
                 }
                 else

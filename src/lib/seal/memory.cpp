@@ -178,7 +178,7 @@ void* DynamicHeapAllocator::reallocate(void* ptr, ssize newSize, ssize alignment
     if (!newPtr) return nullptr;
 
     ssize copySize = (newSize < block->requestedSize) ? newSize : block->requestedSize;
-    if (copySize > 0) seal::memcpy(newPtr, ptr, copySize);
+    if (copySize > 0) seal::mem_copy(newPtr, ptr, copySize);
 
     deallocate(ptr);
     return newPtr;
